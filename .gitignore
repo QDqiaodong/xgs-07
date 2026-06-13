@@ -1,0 +1,10 @@
+node_modules/
+target/
+dist/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr

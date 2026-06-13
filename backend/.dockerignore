@@ -1,0 +1,13 @@
+target
+.mvn
+.git
+.gitignore
+.DS_Store
+*.log
+logs
+tmp
+temp
+uploads
+.vscode
+.idea
+screenshots

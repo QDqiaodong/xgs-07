@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: ${DOCKER_REGISTRY}mysql:8.0
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      TZ: ${TZ}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: ${DOCKER_REGISTRY}redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis-dev
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

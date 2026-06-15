@@ -249,6 +249,7 @@ import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, Edit, Check, Warning, Clock } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress } from '@/utils/storage'
+import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex } from '@/utils/manuscript'
 
 const route = useRoute()
 const manuscript = ref(null)
@@ -323,32 +324,15 @@ const getParagraphMargin = (paraIndex) => {
 }
 
 const contentSections = computed(() => {
-  if (!manuscript.value?.content) return []
-  const lines = manuscript.value.content.split(/\n+/).filter(line => line.trim())
-  const sections = []
-  lines.forEach(line => {
-    const trimmed = line.trim()
-    if (trimmed.length < 15 && (trimmed.endsWith('：') || trimmed.endsWith(':') || /^[第零一二三四五六七八九十\d]+/.test(trimmed))) {
-      sections.push({ type: 'heading', content: trimmed })
-    } else {
-      sections.push({ type: 'paragraph', content: trimmed })
-    }
-  })
-  return sections
+  return splitContentSections(manuscript.value?.content)
 })
 
 const paragraphSections = computed(() => {
-  return contentSections.value.filter(s => s.type === 'paragraph')
+  return getParagraphSections(manuscript.value?.content)
 })
 
 const getParagraphIndex = (sectionIndex) => {
-  let paraIndex = 0
-  for (let i = 0; i < sectionIndex; i++) {
-    if (contentSections.value[i]?.type === 'paragraph') {
-      paraIndex++
-    }
-  }
-  return paraIndex
+  return calcParagraphIndex(contentSections.value, sectionIndex)
 }
 
 const hasRhythmData = (index) => {
@@ -960,14 +944,19 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 8px;
   padding: 4px 0;
-  opacity: 0;
-  transform: translateY(-4px);
+  opacity: 0.7;
+  transform: translateY(0);
   transition: all 0.2s ease;
 }
 
 .content-section:hover .paragraph-status-bar {
   opacity: 1;
-  transform: translateY(0);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .paragraph-status-bar {
+    opacity: 1;
+  }
 }
 
 .status-label {

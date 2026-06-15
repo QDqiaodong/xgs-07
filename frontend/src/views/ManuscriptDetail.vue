@@ -69,11 +69,14 @@
       </div>
 
       <div class="content-column">
-        <div class="manuscript-content">
+        <div class="manuscript-content" :class="'type-' + manuscriptType">
           <div class="article-header">
             <h1 class="article-title">{{ manuscript.title }}</h1>
             <div class="article-meta">
               <el-tag type="primary" size="small">{{ manuscript.categoryName }}</el-tag>
+              <el-tag size="small" :type="manuscriptType === 'poetry' ? 'warning' : 'info'">
+                {{ manuscriptType === 'poetry' ? '古诗词' : '散文' }}
+              </el-tag>
               <span v-if="manuscript.difficulty" class="meta-item">难度：{{ manuscript.difficulty }}</span>
               <span v-if="manuscript.author" class="meta-item">作者：{{ manuscript.author }}</span>
               <span class="meta-item">浏览：{{ manuscript.viewCount }}</span>
@@ -92,7 +95,11 @@
               @mouseenter="onParagraphHover(index)"
               @mouseleave="onParagraphLeave"
             >
-              <div v-if="section.type === 'paragraph'" class="paragraph">{{ section.content }}</div>
+              <div
+                v-if="section.type === 'paragraph'"
+                class="paragraph"
+                :style="{ marginBottom: getParagraphMargin(getParagraphIndex(index)) }"
+              >{{ section.content }}</div>
               <div v-else-if="section.type === 'heading'" class="section-heading">{{ section.content }}</div>
               <div v-if="section.type === 'paragraph' && rhythmData[getParagraphIndex(index)]?.note" class="rhythm-note-inline">
                 💡 {{ rhythmData[getParagraphIndex(index)].note }}
@@ -215,6 +222,39 @@ const rhythmForm = ref({
 const pauseOptions = ['短停', '中停', '长停', '换气', '停顿强调']
 const stressOptions = ['重音', '轻读', '拖音', '颤音', '气声']
 const speedOptions = ['慢速', '稍慢', '正常', '稍快', '快速']
+
+const manuscriptType = computed(() => {
+  if (!manuscript.value) return 'prose'
+  const categoryName = manuscript.value.categoryName || ''
+  const content = manuscript.value.content || ''
+  
+  const poetryKeywords = ['诗', '词', '曲', '赋', '古诗', '唐诗', '宋词', '元曲', '绝句', '律诗', '乐府']
+  const isPoetryCategory = poetryKeywords.some(kw => categoryName.includes(kw))
+  
+  if (isPoetryCategory) return 'poetry'
+  
+  const lines = content.split(/\n+/).filter(l => l.trim())
+  const shortLineCount = lines.filter(l => l.trim().length <= 12).length
+  const isPoetryContent = lines.length >= 4 && shortLineCount / lines.length >= 0.6
+  
+  return isPoetryContent ? 'poetry' : 'prose'
+})
+
+const pauseMarginMap = {
+  '短停': '1em',
+  '中停': '1.5em',
+  '长停': '2.5em',
+  '换气': '1.2em',
+  '停顿强调': '2em'
+}
+
+const getParagraphMargin = (paraIndex) => {
+  const data = rhythmData.value[paraIndex]
+  if (data?.pause && pauseMarginMap[data.pause]) {
+    return pauseMarginMap[data.pause]
+  }
+  return manuscriptType.value === 'poetry' ? '0.8em' : '1.5em'
+}
 
 const contentSections = computed(() => {
   if (!manuscript.value?.content) return []
@@ -395,6 +435,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.manuscript-content {
+  --prose-font-size: 17px;
+  --prose-line-height: 2.2;
+  --prose-letter-spacing: 0.05em;
+  --prose-max-width: 720px;
+  --prose-padding-x: 60px;
+  
+  --poetry-font-size: 18px;
+  --poetry-line-height: 1.8;
+  --poetry-letter-spacing: 0.1em;
+  --poetry-max-width: 600px;
+  --poetry-padding-x: 80px;
+}
+
 .article-header {
   text-align: center;
   margin-bottom: 40px;
@@ -413,9 +467,10 @@ onMounted(() => {
 .article-meta {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+  align-items: center;
 }
 
 .meta-item {
@@ -431,17 +486,39 @@ onMounted(() => {
   background: #f5f7fa;
   border-radius: 8px;
   font-style: italic;
+  max-width: var(--prose-max-width);
+  margin: 0 auto;
 }
 
-.article-body {
-  font-size: 17px;
-  line-height: 2;
+.type-prose .article-body {
+  font-size: var(--prose-font-size);
+  line-height: var(--prose-line-height);
+  letter-spacing: var(--prose-letter-spacing);
   color: #303133;
+  max-width: var(--prose-max-width);
+  margin: 0 auto;
+  padding: 0 var(--prose-padding-x);
 }
 
-.paragraph {
-  margin-bottom: 20px;
+.type-poetry .article-body {
+  font-size: var(--poetry-font-size);
+  line-height: var(--poetry-line-height);
+  letter-spacing: var(--poetry-letter-spacing);
+  color: #303133;
+  max-width: var(--poetry-max-width);
+  margin: 0 auto;
+  padding: 0 var(--poetry-padding-x);
+  text-align: center;
+}
+
+.type-prose .paragraph {
   text-indent: 2em;
+  text-align: justify;
+}
+
+.type-poetry .paragraph {
+  text-indent: 0;
+  text-align: center;
 }
 
 .section-heading {
@@ -451,6 +528,9 @@ onMounted(() => {
   margin: 32px 0 16px;
   padding-bottom: 8px;
   border-bottom: 2px solid #ecf5ff;
+  text-align: left;
+  text-indent: 0;
+  letter-spacing: 0;
 }
 
 .notes-section {

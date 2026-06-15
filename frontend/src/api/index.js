@@ -33,3 +33,11 @@ export const getUserNotes = (params) => request.get('/notes/user', { params })
 export const getManuscriptNotes = (manuscriptId) => request.get(`/notes/manuscript/${manuscriptId}`)
 
 export const deleteNote = (id) => request.delete(`/notes/${id}`)
+
+export const saveParagraphProgress = (data) => request.post('/paragraph-progress', data)
+
+export const getParagraphProgress = (userId, manuscriptId) => request.get('/paragraph-progress', { params: { userId, manuscriptId } })
+
+export const getParagraphProgressList = (userId, manuscriptId) => request.get('/paragraph-progress/list', { params: { userId, manuscriptId } })
+
+export const deleteParagraphProgress = (userId, manuscriptId, paragraphIndex) => request.delete('/paragraph-progress', { params: { userId, manuscriptId, paragraphIndex } })

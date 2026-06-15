@@ -37,6 +37,7 @@
           >
             <div class="rhythm-item-header">
               <span class="paragraph-num">第 {{ index + 1 }} 段</span>
+              <span :class="['status-badge', 'status-' + getParagraphStatus(index)]">{{ getStatusLabel(getParagraphStatus(index)) }}</span>
               <el-button type="text" size="small" @click.stop="openRhythmEditor(index)">
                 <el-icon><Edit /></el-icon>
               </el-button>
@@ -82,6 +83,28 @@
               <span class="meta-item">浏览：{{ manuscript.viewCount }}</span>
               <span class="meta-item">收藏：{{ manuscript.favoriteCount }}</span>
             </div>
+            <div class="progress-stats" v-if="paragraphSections.length > 0">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+              </div>
+              <div class="progress-info">
+                <span class="progress-item mastered">
+                  <span class="progress-dot"></span>
+                  已熟练 {{ progressStats.mastered }}
+                </span>
+                <span class="progress-item strengthen">
+                  <span class="progress-dot"></span>
+                  需加强 {{ progressStats.strengthen }}
+                </span>
+                <span class="progress-item skip">
+                  <span class="progress-dot"></span>
+                  暂不练 {{ progressStats.skip }}
+                </span>
+                <span class="progress-item total">
+                  共 {{ paragraphSections.length }} 段
+                </span>
+              </div>
+            </div>
             <p v-if="manuscript.introduction" class="introduction">{{ manuscript.introduction }}</p>
           </div>
 
@@ -91,15 +114,50 @@
               v-for="(section, index) in contentSections"
               :key="index"
               :id="'paragraph-' + index"
-              :class="{ 'paragraph-highlight': isParagraphActive(index) }"
+              :class="{
+                'paragraph-highlight': isParagraphActive(index),
+                'paragraph-status-mastered': section.type === 'paragraph' && getParagraphStatus(getParagraphIndex(index)) === 'mastered',
+                'paragraph-status-strengthen': section.type === 'paragraph' && getParagraphStatus(getParagraphIndex(index)) === 'strengthen',
+                'paragraph-status-skip': section.type === 'paragraph' && getParagraphStatus(getParagraphIndex(index)) === 'skip'
+              }"
               @mouseenter="onParagraphHover(index)"
               @mouseleave="onParagraphLeave"
             >
-              <div
-                v-if="section.type === 'paragraph'"
-                class="paragraph"
-                :style="{ marginBottom: getParagraphMargin(getParagraphIndex(index)) }"
-              >{{ section.content }}</div>
+              <div class="paragraph-wrapper" v-if="section.type === 'paragraph'">
+                <div class="paragraph-status-bar">
+                  <span class="status-label">第 {{ getParagraphIndex(index) + 1 }} 段</span>
+                  <div class="status-actions">
+                    <el-button
+                      :type="getParagraphStatus(getParagraphIndex(index)) === 'mastered' ? 'success' : 'default'"
+                      size="small"
+                      @click.stop="setParagraphStatus(getParagraphIndex(index), 'mastered')"
+                    >
+                      <el-icon><Check /></el-icon>
+                      已熟练
+                    </el-button>
+                    <el-button
+                      :type="getParagraphStatus(getParagraphIndex(index)) === 'strengthen' ? 'warning' : 'default'"
+                      size="small"
+                      @click.stop="setParagraphStatus(getParagraphIndex(index), 'strengthen')"
+                    >
+                      <el-icon><Warning /></el-icon>
+                      需加强
+                    </el-button>
+                    <el-button
+                      :type="getParagraphStatus(getParagraphIndex(index)) === 'skip' ? 'info' : 'default'"
+                      size="small"
+                      @click.stop="setParagraphStatus(getParagraphIndex(index), 'skip')"
+                    >
+                      <el-icon><Clock /></el-icon>
+                      暂不练
+                    </el-button>
+                  </div>
+                </div>
+                <div
+                  class="paragraph"
+                  :style="{ marginBottom: getParagraphMargin(getParagraphIndex(index)) }"
+                >{{ section.content }}</div>
+              </div>
               <div v-else-if="section.type === 'heading'" class="section-heading">{{ section.content }}</div>
               <div v-if="section.type === 'paragraph' && rhythmData[getParagraphIndex(index)]?.note" class="rhythm-note-inline">
                 💡 {{ rhythmData[getParagraphIndex(index)].note }}
@@ -188,9 +246,9 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, Edit } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi } from '@/api'
-import { getCurrentUserId, getRhythm, saveRhythm } from '@/utils/storage'
+import { Tickets, ArrowLeft, Edit, Check, Warning, Clock } from '@element-plus/icons-vue'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress } from '@/api'
+import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress } from '@/utils/storage'
 
 const route = useRoute()
 const manuscript = ref(null)
@@ -218,6 +276,14 @@ const rhythmForm = ref({
   speed: '',
   note: ''
 })
+
+const paragraphProgress = ref({})
+
+const statusOptions = [
+  { value: 'mastered', label: '已熟练', type: 'success' },
+  { value: 'strengthen', label: '需加强', type: 'warning' },
+  { value: 'skip', label: '暂不练', type: 'info' }
+]
 
 const pauseOptions = ['短停', '中停', '长停', '换气', '停顿强调']
 const stressOptions = ['重音', '轻读', '拖音', '颤音', '气声']
@@ -288,6 +354,57 @@ const getParagraphIndex = (sectionIndex) => {
 const hasRhythmData = (index) => {
   const data = rhythmData.value[index]
   return data && (data.pause || data.stress || data.speed || data.note)
+}
+
+const progressStats = computed(() => {
+  const stats = { mastered: 0, strengthen: 0, skip: 0, total: paragraphSections.value.length }
+  for (let i = 0; i < paragraphSections.value.length; i++) {
+    const status = paragraphProgress.value[i]
+    if (status === 'mastered') stats.mastered++
+    else if (status === 'strengthen') stats.strengthen++
+    else if (status === 'skip') stats.skip++
+  }
+  return stats
+})
+
+const progressPercent = computed(() => {
+  const total = paragraphSections.value.length
+  if (total === 0) return 0
+  return Math.round((progressStats.value.mastered / total) * 100)
+})
+
+const getParagraphStatus = (index) => {
+  return paragraphProgress.value[index] || ''
+}
+
+const getStatusLabel = (status) => {
+  const map = {
+    mastered: '已熟练',
+    strengthen: '需加强',
+    skip: '暂不练'
+  }
+  return map[status] || '未标记'
+}
+
+const setParagraphStatus = async (paraIndex, status) => {
+  const currentStatus = paragraphProgress.value[paraIndex]
+  if (currentStatus === status) {
+    delete paragraphProgress.value[paraIndex]
+  } else {
+    paragraphProgress.value[paraIndex] = status
+  }
+  saveProgress(route.params.id, paragraphProgress.value)
+  try {
+    await saveParagraphProgress({
+      userId,
+      manuscriptId: route.params.id,
+      paragraphIndex: paraIndex,
+      status: paragraphProgress.value[paraIndex] || null
+    })
+  } catch (e) {
+    console.error('保存段落进度失败', e)
+  }
+  ElMessage.success(currentStatus === status ? '已取消标记' : '状态已更新')
 }
 
 const isParagraphActive = (sectionIndex) => {
@@ -363,6 +480,22 @@ const loadRhythmData = () => {
   }
 }
 
+const loadProgressData = async () => {
+  const localData = getProgress(route.params.id)
+  if (localData) {
+    paragraphProgress.value = localData
+  }
+  try {
+    const serverData = await getParagraphProgress(userId, route.params.id)
+    if (serverData) {
+      paragraphProgress.value = serverData
+      saveProgress(route.params.id, serverData)
+    }
+  } catch (e) {
+    console.error('加载段落进度失败', e)
+  }
+}
+
 const loadDetail = async () => {
   loading.value = true
   try {
@@ -373,6 +506,7 @@ const loadDetail = async () => {
       loadNotes()
     ])
     loadRhythmData()
+    loadProgressData()
   } catch (e) {
     console.error(e)
   } finally {
@@ -488,6 +622,64 @@ onMounted(() => {
   font-style: italic;
   max-width: var(--prose-max-width);
   margin: 0 auto;
+}
+
+.progress-stats {
+  margin: 20px auto 0;
+  max-width: var(--prose-max-width);
+}
+
+.progress-bar {
+  height: 8px;
+  background: #f0f2f5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.progress-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.progress-item.mastered .progress-dot {
+  background: #67c23a;
+}
+
+.progress-item.strengthen .progress-dot {
+  background: #e6a23c;
+}
+
+.progress-item.skip .progress-dot {
+  background: #909399;
+}
+
+.progress-item.total {
+  color: #909399;
 }
 
 .type-prose .article-body {
@@ -655,6 +847,32 @@ onMounted(() => {
   color: #303133;
 }
 
+.status-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-badge.status-mastered {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.status-badge.status-strengthen {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+
+.status-badge.status-skip {
+  background: #f4f4f5;
+  color: #909399;
+}
+
+.status-badge.status- {
+  display: none;
+}
+
 .rhythm-item-content {
   display: flex;
   flex-wrap: wrap;
@@ -730,6 +948,62 @@ onMounted(() => {
 .paragraph-highlight {
   background: #ecf5ff;
   box-shadow: 0 0 0 2px #409eff;
+}
+
+.paragraph-wrapper {
+  position: relative;
+}
+
+.paragraph-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.2s ease;
+}
+
+.content-section:hover .paragraph-status-bar {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.status-label {
+  font-size: 12px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.status-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.paragraph-status-mastered {
+  background: linear-gradient(135deg, rgba(103, 194, 58, 0.08) 0%, rgba(133, 206, 97, 0.05) 100%);
+  border-left: 3px solid #67c23a;
+  padding-left: 12px !important;
+  margin-left: -12px !important;
+  border-radius: 4px;
+}
+
+.paragraph-status-strengthen {
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.08) 0%, rgba(245, 205, 135, 0.05) 100%);
+  border-left: 3px solid #e6a23c;
+  padding-left: 12px !important;
+  margin-left: -12px !important;
+  border-radius: 4px;
+}
+
+.paragraph-status-skip {
+  background: linear-gradient(135deg, rgba(144, 147, 153, 0.06) 0%, rgba(192, 196, 204, 0.04) 100%);
+  border-left: 3px solid #909399;
+  padding-left: 12px !important;
+  margin-left: -12px !important;
+  border-radius: 4px;
+  opacity: 0.6;
 }
 
 .rhythm-note-inline {

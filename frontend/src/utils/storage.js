@@ -1,5 +1,6 @@
 const DRAFT_KEY = 'recitation_draft_'
 const RHYTHM_KEY = 'recitation_rhythm_'
+const PROGRESS_KEY = 'recitation_progress_'
 
 export const saveDraft = (key, data) => {
   try {
@@ -62,6 +63,38 @@ export const removeRhythm = (manuscriptId) => {
     localStorage.removeItem(RHYTHM_KEY + manuscriptId)
   } catch (e) {
     console.error('删除节奏数据失败', e)
+  }
+}
+
+export const saveProgress = (manuscriptId, progressData) => {
+  try {
+    localStorage.setItem(PROGRESS_KEY + manuscriptId, JSON.stringify({
+      data: progressData,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.error('保存段落进度失败', e)
+  }
+}
+
+export const getProgress = (manuscriptId) => {
+  try {
+    const item = localStorage.getItem(PROGRESS_KEY + manuscriptId)
+    if (item) {
+      const parsed = JSON.parse(item)
+      return parsed.data
+    }
+  } catch (e) {
+    console.error('读取段落进度失败', e)
+  }
+  return {}
+}
+
+export const removeProgress = (manuscriptId) => {
+  try {
+    localStorage.removeItem(PROGRESS_KEY + manuscriptId)
+  } catch (e) {
+    console.error('删除段落进度失败', e)
   }
 }
 

@@ -22,7 +22,30 @@
           </div>
         </div>
         <div class="note-body">
-          <div class="note-grid">
+            <div class="progress-summary" v-if="note.paragraphProgress">
+              <div class="progress-title">段落掌握情况</div>
+              <div class="progress-stats-inline">
+                <span class="stat-item mastered">
+                  <span class="stat-dot"></span>
+                  已熟练 {{ note.paragraphProgress.mastered || 0 }}
+                </span>
+                <span class="stat-item strengthen">
+                  <span class="stat-dot"></span>
+                  需加强 {{ note.paragraphProgress.strengthen || 0 }}
+                </span>
+                <span class="stat-item skip">
+                  <span class="stat-dot"></span>
+                  暂不练 {{ note.paragraphProgress.skip || 0 }}
+                </span>
+                <span class="stat-item total">
+                  共 {{ note.paragraphProgress.total || 0 }} 段
+                </span>
+              </div>
+              <div class="progress-bar-small">
+                <div class="progress-fill-mastered" :style="{ width: note.paragraphProgress.percent + '%' }"></div>
+              </div>
+            </div>
+            <div class="note-grid">
             <div v-if="note.difficultyPoints" class="note-item">
               <div class="item-label">难点要点</div>
               <div class="item-content">{{ note.difficultyPoints }}</div>
@@ -86,7 +109,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById } from '@/api'
+import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getParagraphProgressList } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
 
 const router = useRouter()
@@ -127,6 +150,32 @@ const loadList = async () => {
       try {
         const manuscript = await getManuscriptById(list.value[i].manuscriptId)
         list.value[i].manuscriptTitle = manuscript?.title
+        const content = manuscript?.content || ''
+        const paragraphs = content.split(/\n+/).filter(line => {
+          const trimmed = line.trim()
+          if (trimmed.length < 15 && (trimmed.endsWith('：') || trimmed.endsWith(':') || /^[第零一二三四五六七八九十\d]+/.test(trimmed))) {
+            return false
+          }
+          return trimmed.length > 0
+        })
+        const total = paragraphs.length
+        
+        try {
+          const progressList = await getParagraphProgressList(userId, list.value[i].manuscriptId)
+          const stats = { mastered: 0, strengthen: 0, skip: 0, total }
+          if (progressList && progressList.length > 0) {
+            progressList.forEach(p => {
+              if (p.status === 'mastered') stats.mastered++
+              else if (p.status === 'strengthen') stats.strengthen++
+              else if (p.status === 'skip') stats.skip++
+            })
+          }
+          stats.percent = total > 0 ? Math.round((stats.mastered / total) * 100) : 0
+          list.value[i].paragraphProgress = stats
+        } catch (e) {
+          console.error('加载段落进度失败', e)
+          list.value[i].paragraphProgress = { mastered: 0, strengthen: 0, skip: 0, total, percent: 0 }
+        }
       } catch (e) {
         console.error(e)
       }
@@ -236,6 +285,72 @@ onMounted(() => {
 .note-actions {
   display: flex;
   gap: 8px;
+}
+
+.progress-summary {
+  background: linear-gradient(135deg, #f0f9eb 0%, #fdf6ec 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.progress-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 10px;
+}
+
+.progress-stats-inline {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.stat-item.mastered .stat-dot {
+  background: #67c23a;
+}
+
+.stat-item.strengthen .stat-dot {
+  background: #e6a23c;
+}
+
+.stat-item.skip .stat-dot {
+  background: #909399;
+}
+
+.stat-item.total {
+  color: #909399;
+}
+
+.progress-bar-small {
+  height: 6px;
+  background: #e4e7ed;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill-mastered {
+  height: 100%;
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
 .note-grid {

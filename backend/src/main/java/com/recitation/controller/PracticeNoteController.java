@@ -44,8 +44,8 @@ public class PracticeNoteController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        boolean deleted = practiceNoteService.deleteNote(id);
+    public Result<Void> delete(@PathVariable Long id, @RequestParam Long userId) {
+        boolean deleted = practiceNoteService.deleteNote(id, userId);
         if (!deleted) {
             return Result.error("笔记不存在");
         }

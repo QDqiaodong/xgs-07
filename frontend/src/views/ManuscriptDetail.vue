@@ -210,44 +210,81 @@
         </div>
 
         <div class="notes-section" v-if="manuscript && notes.length > 0">
-          <h3 class="section-title">大家的练习笔记</h3>
-          <el-card v-for="note in notes" :key="note.id" class="note-card">
-            <div class="note-content">
-              <div v-if="note.difficultyPoints" class="note-item">
-                <span class="note-label">难点要点：</span>
-                <span class="note-text">{{ note.difficultyPoints }}</span>
+          <h3 class="section-title">
+            <el-icon><EditPen /></el-icon>
+            大家的练习笔记
+          </h3>
+          <div v-for="note in notes" :key="note.id" class="note-card-wrapper">
+            <div class="note-sections">
+              <div class="section-item section-difficulty" v-if="note.difficultyPoints">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Warning /></el-icon>
+                  <span class="section-title">难点句</span>
+                </div>
+                <div class="section-content">{{ note.difficultyPoints }}</div>
               </div>
-              <div v-if="note.toneControl" class="note-item">
-                <span class="note-label">语气把控：</span>
-                <span class="note-text">{{ note.toneControl }}</span>
+              
+              <div class="section-item section-tone" v-if="note.toneControl">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Microphone /></el-icon>
+                  <span class="section-title">语气控制</span>
+                </div>
+                <div class="section-content">{{ note.toneControl }}</div>
               </div>
-              <div v-if="note.emotionExpression" class="note-item">
-                <span class="note-label">情感表达：</span>
-                <span class="note-text">{{ note.emotionExpression }}</span>
+              
+              <div class="section-item section-emotion" v-if="note.emotionExpression">
+                <div class="section-header">
+                  <el-icon class="section-icon"><MagicStick /></el-icon>
+                  <span class="section-title">情感表达</span>
+                </div>
+                <div class="section-content">{{ note.emotionExpression }}</div>
               </div>
-              <div v-if="note.otherNotes" class="note-item">
-                <span class="note-label">其他心得：</span>
-                <span class="note-text">{{ note.otherNotes }}</span>
+              
+              <div class="section-item section-other" v-if="note.otherNotes">
+                <div class="section-header">
+                  <el-icon class="section-icon"><EditPen /></el-icon>
+                  <span class="section-title">其他记录</span>
+                </div>
+                <div class="section-content">{{ note.otherNotes }}</div>
               </div>
             </div>
-          </el-card>
+          </div>
         </div>
       </div>
     </div>
 
     <el-dialog v-model="showNoteDialog" title="记录练习笔记" width="600px">
       <el-form :model="noteForm" label-width="100px">
-        <el-form-item label="难点要点">
-          <el-input v-model="noteForm.difficultyPoints" type="textarea" :rows="2" placeholder="记录练习中的难点要点" />
+        <div class="form-section-title">
+          <el-icon><Warning /></el-icon>
+          <span>朗读难点记录</span>
+        </div>
+        <el-form-item label="难点句">
+          <el-input v-model="noteForm.difficultyPoints" type="textarea" :rows="2" placeholder="记录练习中遇到的难读句子、发音难点等" />
         </el-form-item>
-        <el-form-item label="语气把控">
-          <el-input v-model="noteForm.toneControl" type="textarea" :rows="2" placeholder="记录语气把控要点" />
+        
+        <div class="form-section-title">
+          <el-icon><Microphone /></el-icon>
+          <span>语气控制要点</span>
+        </div>
+        <el-form-item label="语气控制">
+          <el-input v-model="noteForm.toneControl" type="textarea" :rows="2" placeholder="记录语气、语调、节奏等控制要点" />
         </el-form-item>
+        
+        <div class="form-section-title">
+          <el-icon><MagicStick /></el-icon>
+          <span>情感表达要点</span>
+        </div>
         <el-form-item label="情感表达">
-          <el-input v-model="noteForm.emotionExpression" type="textarea" :rows="2" placeholder="记录情感表达要点" />
+          <el-input v-model="noteForm.emotionExpression" type="textarea" :rows="2" placeholder="记录情感表达、情绪把控要点" />
         </el-form-item>
-        <el-form-item label="其他心得">
-          <el-input v-model="noteForm.otherNotes" type="textarea" :rows="2" placeholder="其他练习心得" />
+        
+        <div class="form-section-title">
+          <el-icon><EditPen /></el-icon>
+          <span>其他训练记录</span>
+        </div>
+        <el-form-item label="其他记录">
+          <el-input v-model="noteForm.otherNotes" type="textarea" :rows="2" placeholder="其他练习心得、感悟等" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -322,7 +359,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, Edit, Check, Warning, Clock, MagicStick } from '@element-plus/icons-vue'
+import { Tickets, ArrowLeft, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType } from '@/utils/manuscript'
@@ -900,24 +937,116 @@ onMounted(() => {
   font-size: 20px;
   margin-bottom: 16px;
   color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.note-card {
-  margin-bottom: 16px;
+.note-card-wrapper {
+  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.note-item {
-  margin-bottom: 12px;
+.note-sections {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.section-item {
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.section-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.section-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.section-icon {
+  font-size: 16px;
+}
+
+.section-item .section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.section-content {
+  padding: 14px 16px 16px;
+  font-size: 14px;
+  color: #303133;
   line-height: 1.8;
 }
 
-.note-label {
+.section-difficulty .section-header {
+  background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%);
+  color: #f56c6c;
+}
+
+.section-difficulty .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fef5f5 100%);
+  border-left: 3px solid #f56c6c;
+}
+
+.section-tone .section-header {
+  background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+  color: #409eff;
+}
+
+.section-tone .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+  border-left: 3px solid #409eff;
+}
+
+.section-emotion .section-header {
+  background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%);
+  color: #67c23a;
+}
+
+.section-emotion .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fcf5 100%);
+  border-left: 3px solid #67c23a;
+}
+
+.section-other .section-header {
+  background: linear-gradient(135deg, #fdf6ec 0%, #faecd8 100%);
+  color: #e6a23c;
+}
+
+.section-other .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fefaf5 100%);
+  border-left: 3px solid #e6a23c;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 14px;
   font-weight: 600;
   color: #606266;
 }
 
-.note-text {
-  color: #303133;
+.form-section-title:first-child {
+  margin-top: 0;
 }
 
 .main-content {

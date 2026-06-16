@@ -4,70 +4,96 @@
     
     <div class="list-content" v-loading="loading">
       <el-empty v-if="!loading && list.length === 0" description="暂无练习笔记" />
-      <el-card v-for="note in list" :key="note.id" class="note-card">
-        <div class="note-header">
-          <div class="note-title" @click="goManuscript(note.manuscriptId)">
-            <el-icon><Document /></el-icon>
-            <span>{{ note.manuscriptTitle || '查看文稿' }}</span>
-          </div>
-          <div class="note-actions">
-            <el-button type="primary" size="small" @click="editNote(note)">
-              <el-icon><Edit /></el-icon>
-              编辑
-            </el-button>
-            <el-button type="danger" size="small" @click="deleteNoteItem(note.id)">
-              <el-icon><Delete /></el-icon>
-              删除
-            </el-button>
-          </div>
-        </div>
-        <div class="note-body">
-            <div class="progress-summary" v-if="note.paragraphProgress">
-              <div class="progress-title">段落掌握情况</div>
-              <div class="progress-stats-inline">
-                <span class="stat-item mastered">
-                  <span class="stat-dot"></span>
-                  已熟练 {{ note.paragraphProgress.mastered || 0 }}
-                </span>
-                <span class="stat-item strengthen">
-                  <span class="stat-dot"></span>
-                  需加强 {{ note.paragraphProgress.strengthen || 0 }}
-                </span>
-                <span class="stat-item skip">
-                  <span class="stat-dot"></span>
-                  暂不练 {{ note.paragraphProgress.skip || 0 }}
-                </span>
-                <span class="stat-item total">
-                  共 {{ note.paragraphProgress.total || 0 }} 段
-                </span>
-              </div>
-              <div class="progress-bar-small">
-                <div class="progress-fill-mastered" :style="{ width: note.paragraphProgress.percent + '%' }"></div>
-              </div>
+      <div v-for="note in list" :key="note.id" class="note-card-wrapper">
+        <el-card class="note-main-card">
+          <div class="note-header">
+            <div class="note-title" @click="goManuscript(note.manuscriptId)">
+              <el-icon><Document /></el-icon>
+              <span>{{ note.manuscriptTitle || '查看文稿' }}</span>
             </div>
-            <div class="note-grid">
-            <div v-if="note.difficultyPoints" class="note-item">
-              <div class="item-label">难点要点</div>
-              <div class="item-content">{{ note.difficultyPoints }}</div>
-            </div>
-            <div v-if="note.toneControl" class="note-item">
-              <div class="item-label">语气把控</div>
-              <div class="item-content">{{ note.toneControl }}</div>
-            </div>
-            <div v-if="note.emotionExpression" class="note-item">
-              <div class="item-label">情感表达</div>
-              <div class="item-content">{{ note.emotionExpression }}</div>
-            </div>
-            <div v-if="note.otherNotes" class="note-item">
-              <div class="item-label">其他心得</div>
-              <div class="item-content">{{ note.otherNotes }}</div>
+            <div class="note-actions">
+              <el-button type="primary" size="small" @click="editNote(note)">
+                <el-icon><Edit /></el-icon>
+                编辑
+              </el-button>
+              <el-button type="danger" size="small" @click="deleteNoteItem(note.id)">
+                <el-icon><Delete /></el-icon>
+                删除
+              </el-button>
             </div>
           </div>
+          
+          <div class="progress-summary" v-if="note.paragraphProgress">
+            <div class="progress-title">
+              <el-icon><TrendCharts /></el-icon>
+              段落掌握情况
+            </div>
+            <div class="progress-stats-inline">
+              <span class="stat-item mastered">
+                <span class="stat-dot"></span>
+                已熟练 {{ note.paragraphProgress.mastered || 0 }}
+              </span>
+              <span class="stat-item strengthen">
+                <span class="stat-dot"></span>
+                需加强 {{ note.paragraphProgress.strengthen || 0 }}
+              </span>
+              <span class="stat-item skip">
+                <span class="stat-dot"></span>
+                暂不练 {{ note.paragraphProgress.skip || 0 }}
+              </span>
+              <span class="stat-item total">
+                共 {{ note.paragraphProgress.total || 0 }} 段
+              </span>
+            </div>
+            <div class="progress-bar-small">
+              <div class="progress-fill-mastered" :style="{ width: note.paragraphProgress.percent + '%' }"></div>
+            </div>
+          </div>
+          
           <div class="note-time">
             更新于：{{ formatTime(note.updateTime) }}
           </div>
+        </el-card>
+        
+        <div class="note-sections">
+          <el-card class="section-card section-difficulty" v-if="note.difficultyPoints">
+            <div class="section-header">
+              <el-icon class="section-icon"><Warning /></el-icon>
+              <span class="section-title">难点句</span>
+            </div>
+            <div class="section-content">{{ note.difficultyPoints }}</div>
+          </el-card>
+          
+          <el-card class="section-card section-tone" v-if="note.toneControl">
+            <div class="section-header">
+              <el-icon class="section-icon"><Microphone /></el-icon>
+              <span class="section-title">语气控制</span>
+            </div>
+            <div class="section-content">{{ note.toneControl }}</div>
+          </el-card>
+          
+          <el-card class="section-card section-emotion" v-if="note.emotionExpression">
+            <div class="section-header">
+              <el-icon class="section-icon"><MagicStick /></el-icon>
+              <span class="section-title">情感表达</span>
+            </div>
+            <div class="section-content">{{ note.emotionExpression }}</div>
+          </el-card>
+          
+          <el-card class="section-card section-other" v-if="note.otherNotes">
+            <div class="section-header">
+              <el-icon class="section-icon"><EditPen /></el-icon>
+              <span class="section-title">其他记录</span>
+            </div>
+            <div class="section-content">{{ note.otherNotes }}</div>
+          </el-card>
+          
+          <div class="empty-sections-tip" v-if="!note.difficultyPoints && !note.toneControl && !note.emotionExpression && !note.otherNotes">
+            <el-icon><InfoFilled /></el-icon>
+            <span>暂无详细笔记记录，点击编辑开始记录</span>
+          </div>
         </div>
-      </el-card>
+      </div>
     </div>
 
     <div class="pagination-wrapper" v-if="total > 0">
@@ -82,19 +108,38 @@
       />
     </div>
 
-    <el-dialog v-model="showEditDialog" title="编辑笔记" width="600px">
+    <el-dialog v-model="showEditDialog" title="编辑练习笔记" width="600px">
       <el-form :model="editForm" label-width="100px">
-        <el-form-item label="难点要点">
-          <el-input v-model="editForm.difficultyPoints" type="textarea" :rows="2" />
+        <div class="form-section-title">
+          <el-icon><Warning /></el-icon>
+          <span>朗读难点记录</span>
+        </div>
+        <el-form-item label="难点句">
+          <el-input v-model="editForm.difficultyPoints" type="textarea" :rows="2" placeholder="记录练习中遇到的难读句子、发音难点等" />
         </el-form-item>
-        <el-form-item label="语气把控">
-          <el-input v-model="editForm.toneControl" type="textarea" :rows="2" />
+        
+        <div class="form-section-title">
+          <el-icon><Microphone /></el-icon>
+          <span>语气控制要点</span>
+        </div>
+        <el-form-item label="语气控制">
+          <el-input v-model="editForm.toneControl" type="textarea" :rows="2" placeholder="记录语气、语调、节奏等控制要点" />
         </el-form-item>
+        
+        <div class="form-section-title">
+          <el-icon><MagicStick /></el-icon>
+          <span>情感表达要点</span>
+        </div>
         <el-form-item label="情感表达">
-          <el-input v-model="editForm.emotionExpression" type="textarea" :rows="2" />
+          <el-input v-model="editForm.emotionExpression" type="textarea" :rows="2" placeholder="记录情感表达、情绪把控要点" />
         </el-form-item>
-        <el-form-item label="其他心得">
-          <el-input v-model="editForm.otherNotes" type="textarea" :rows="2" />
+        
+        <div class="form-section-title">
+          <el-icon><EditPen /></el-icon>
+          <span>其他训练记录</span>
+        </div>
+        <el-form-item label="其他记录">
+          <el-input v-model="editForm.otherNotes" type="textarea" :rows="2" placeholder="其他练习心得、感悟等" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -109,6 +154,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled } from '@element-plus/icons-vue'
 import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getParagraphProgressList } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
 import { getParagraphCount, detectManuscriptType } from '@/utils/manuscript'
@@ -224,7 +270,7 @@ const deleteNoteItem = async (id) => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    await apiDeleteNote(id)
+    await apiDeleteNote(id, userId)
     ElMessage.success('删除成功')
     loadList()
   } catch (e) {
@@ -241,7 +287,7 @@ onMounted(() => {
 
 <style scoped>
 .notes-page {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
@@ -251,8 +297,12 @@ onMounted(() => {
   color: #303133;
 }
 
-.note-card {
-  margin-bottom: 20px;
+.note-card-wrapper {
+  margin-bottom: 28px;
+}
+
+.note-main-card {
+  margin-bottom: 16px;
 }
 
 .note-header {
@@ -287,7 +337,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #f0f9eb 0%, #fdf6ec 100%);
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .progress-title {
@@ -295,6 +345,9 @@ onMounted(() => {
   font-weight: 600;
   color: #303133;
   margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .progress-stats-inline {
@@ -349,35 +402,127 @@ onMounted(() => {
   transition: width 0.3s ease;
 }
 
-.note-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.note-item {
-  background: #f5f7fa;
-  padding: 12px 16px;
-  border-radius: 6px;
-}
-
-.item-label {
-  font-size: 13px;
-  color: #909399;
-  margin-bottom: 6px;
-}
-
-.item-content {
-  font-size: 14px;
-  color: #303133;
-  line-height: 1.6;
-}
-
 .note-time {
   font-size: 12px;
   color: #c0c4cc;
   text-align: right;
+}
+
+.note-sections {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.section-card {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.section-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.section-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.section-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.section-icon {
+  font-size: 18px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.section-content {
+  padding: 16px 20px 20px;
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.8;
+  background: #fff;
+}
+
+.section-difficulty .section-header {
+  background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%);
+  color: #f56c6c;
+}
+
+.section-difficulty .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fef5f5 100%);
+  border-left: 3px solid #f56c6c;
+}
+
+.section-tone .section-header {
+  background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+  color: #409eff;
+}
+
+.section-tone .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%);
+  border-left: 3px solid #409eff;
+}
+
+.section-emotion .section-header {
+  background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%);
+  color: #67c23a;
+}
+
+.section-emotion .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fcf5 100%);
+  border-left: 3px solid #67c23a;
+}
+
+.section-other .section-header {
+  background: linear-gradient(135deg, #fdf6ec 0%, #faecd8 100%);
+  color: #e6a23c;
+}
+
+.section-other .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fefaf5 100%);
+  border-left: 3px solid #e6a23c;
+}
+
+.empty-sections-tip {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+}
+
+.form-section-title:first-child {
+  margin-top: 0;
 }
 
 .list-content {

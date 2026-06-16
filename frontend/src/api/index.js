@@ -32,7 +32,7 @@ export const getUserNotes = (params) => request.get('/notes/user', { params })
 
 export const getManuscriptNotes = (manuscriptId) => request.get(`/notes/manuscript/${manuscriptId}`)
 
-export const deleteNote = (id) => request.delete(`/notes/${id}`)
+export const deleteNote = (id, userId) => request.delete(`/notes/${id}`, { params: { userId } })
 
 export const saveParagraphProgress = (data) => request.post('/paragraph-progress', data)
 

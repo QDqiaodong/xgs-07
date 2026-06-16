@@ -1,6 +1,7 @@
 const DRAFT_KEY = 'recitation_draft_'
 const RHYTHM_KEY = 'recitation_rhythm_'
 const PROGRESS_KEY = 'recitation_progress_'
+const EMOTION_KEY = 'recitation_emotion_'
 
 export const saveDraft = (key, data) => {
   try {
@@ -95,6 +96,38 @@ export const removeProgress = (userId, manuscriptId) => {
     localStorage.removeItem(PROGRESS_KEY + userId + '_' + manuscriptId)
   } catch (e) {
     console.error('删除段落进度失败', e)
+  }
+}
+
+export const saveEmotion = (userId, manuscriptId, emotionData) => {
+  try {
+    localStorage.setItem(EMOTION_KEY + userId + '_' + manuscriptId, JSON.stringify({
+      data: emotionData,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.error('保存情感色带数据失败', e)
+  }
+}
+
+export const getEmotion = (userId, manuscriptId) => {
+  try {
+    const item = localStorage.getItem(EMOTION_KEY + userId + '_' + manuscriptId)
+    if (item) {
+      const parsed = JSON.parse(item)
+      return parsed.data
+    }
+  } catch (e) {
+    console.error('读取情感色带数据失败', e)
+  }
+  return {}
+}
+
+export const removeEmotion = (userId, manuscriptId) => {
+  try {
+    localStorage.removeItem(EMOTION_KEY + userId + '_' + manuscriptId)
+  } catch (e) {
+    console.error('删除情感色带数据失败', e)
   }
 }
 

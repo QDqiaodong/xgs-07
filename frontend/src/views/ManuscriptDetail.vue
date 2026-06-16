@@ -3,6 +3,10 @@
     <div class="detail-header" v-if="manuscript">
       <el-page-header @back="$router.back()" content="返回列表">
         <template #extra>
+          <el-button :type="emotionPanelVisible ? 'success' : 'primary'" @click="toggleEmotionPanel">
+            <el-icon><MagicStick /></el-icon>
+            情感色带
+          </el-button>
           <el-button :type="rhythmPanelVisible ? 'success' : 'primary'" @click="toggleRhythmPanel">
             <el-icon><Tickets /></el-icon>
             节奏板
@@ -105,6 +109,13 @@
                 </span>
               </div>
             </div>
+            <div class="emotion-legend" v-if="emotionPanelVisible">
+              <span class="legend-title">情感色带：</span>
+              <span class="legend-item" v-for="opt in emotionOptions" :key="opt.value">
+                <span class="legend-color" :style="{ background: opt.color }"></span>
+                {{ opt.label }}
+              </span>
+            </div>
             <p v-if="manuscript.introduction" class="introduction">{{ manuscript.introduction }}</p>
           </div>
 
@@ -124,6 +135,21 @@
               @mouseleave="onParagraphLeave"
             >
               <div class="paragraph-wrapper" v-if="section.type === 'paragraph'">
+                <div class="emotion-band-sidebar" v-if="emotionPanelVisible">
+                  <div
+                    class="emotion-band-indicator"
+                    :style="{ background: getEmotionColor(getParagraphIndex(index)) }"
+                    :class="{ 'has-emotion': hasEmotion(getParagraphIndex(index)) }"
+                    @click.stop="openEmotionEditor(getParagraphIndex(index))"
+                  >
+                    <el-tooltip v-if="hasEmotion(getParagraphIndex(index))" :content="getEmotionTooltip(getParagraphIndex(index))" placement="left">
+                      <span class="emotion-dot"></span>
+                    </el-tooltip>
+                    <el-tooltip v-else content="点击添加情感标记" placement="left">
+                      <span class="emotion-add-icon">+</span>
+                    </el-tooltip>
+                  </div>
+                </div>
                 <div class="paragraph-status-bar">
                   <span class="status-label">第 {{ getParagraphIndex(index) + 1 }} 段</span>
                   <div class="status-actions">
@@ -151,16 +177,33 @@
                       <el-icon><Clock /></el-icon>
                       暂不练
                     </el-button>
+                    <el-button
+                      v-if="emotionPanelVisible"
+                      type="primary"
+                      size="small"
+                      plain
+                      @click.stop="openEmotionEditor(getParagraphIndex(index))"
+                    >
+                      <el-icon><MagicStick /></el-icon>
+                      情感
+                    </el-button>
                   </div>
                 </div>
                 <div
                   class="paragraph"
-                  :style="{ marginBottom: getParagraphMargin(getParagraphIndex(index)) }"
+                  :class="{ 'paragraph-with-emotion': emotionPanelVisible }"
+                  :style="{ 
+                    marginBottom: getParagraphMargin(getParagraphIndex(index)),
+                    borderLeftColor: getEmotionColor(getParagraphIndex(index))
+                  }"
                 >{{ section.content }}</div>
               </div>
               <div v-else-if="section.type === 'heading'" class="section-heading">{{ section.content }}</div>
               <div v-if="section.type === 'paragraph' && rhythmData[getParagraphIndex(index)]?.note" class="rhythm-note-inline">
                 💡 {{ rhythmData[getParagraphIndex(index)].note }}
+              </div>
+              <div v-if="section.type === 'paragraph' && emotionPanelVisible && emotionData[getParagraphIndex(index)]?.remark" class="emotion-remark-inline" :style="{ borderLeftColor: getEmotionColor(getParagraphIndex(index)) }">
+                🎭 {{ emotionData[getParagraphIndex(index)].remark }}
               </div>
             </div>
           </div>
@@ -239,6 +282,39 @@
         <el-button type="primary" @click="saveRhythmData">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showEmotionEditor" title="编辑情感色带" width="520px">
+      <el-form :model="emotionForm" label-width="80px">
+        <el-form-item label="情感类型">
+          <div class="emotion-picker">
+            <div
+              class="emotion-option"
+              v-for="opt in emotionOptions"
+              :key="opt.value"
+              :class="{ active: emotionForm.emotionType === opt.value }"
+              :style="{ '--emotion-color': opt.color }"
+              @click="selectEmotion(opt.value)"
+            >
+              <span class="emotion-color-dot" :style="{ background: opt.color }"></span>
+              <span class="emotion-label">{{ opt.label }}</span>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="情感备注">
+          <el-input
+            v-model="emotionForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="输入情感表达提示，如'声音轻柔、语速放缓、带淡淡忧伤'等"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="clearEmotion" type="danger" plain>清除情感</el-button>
+        <el-button @click="showEmotionEditor = false">取消</el-button>
+        <el-button type="primary" @click="saveEmotionData">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -246,9 +322,9 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, Edit, Check, Warning, Clock } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress } from '@/api'
-import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress } from '@/utils/storage'
+import { Tickets, ArrowLeft, Edit, Check, Warning, Clock, MagicStick } from '@element-plus/icons-vue'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
+import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex } from '@/utils/manuscript'
 
 const route = useRoute()
@@ -279,6 +355,26 @@ const rhythmForm = ref({
 })
 
 const paragraphProgress = ref({})
+
+const emotionPanelVisible = ref(true)
+const emotionData = ref({})
+const showEmotionEditor = ref(false)
+const editingEmotionParagraphIndex = ref(-1)
+const emotionForm = ref({
+  emotionType: '',
+  remark: ''
+})
+
+const emotionOptions = [
+  { value: 'calm', label: '平缓', color: '#909399' },
+  { value: 'passionate', label: '激昂', color: '#f56c6c' },
+  { value: 'low', label: '低沉', color: '#606266' },
+  { value: 'bright', label: '明亮', color: '#e6a23c' },
+  { value: 'gentle', label: '温柔', color: '#f48fb1' },
+  { value: 'sad', label: '悲伤', color: '#409eff' },
+  { value: 'joyful', label: '欢快', color: '#67c23a' },
+  { value: 'solemn', label: '庄严', color: '#9b59b6' }
+]
 
 const statusOptions = [
   { value: 'mastered', label: '已熟练', type: 'success' },
@@ -368,6 +464,99 @@ const getStatusLabel = (status) => {
     skip: '暂不练'
   }
   return map[status] || '未标记'
+}
+
+const hasEmotion = (index) => {
+  const data = emotionData.value[index]
+  return data && data.emotionType
+}
+
+const getEmotionColor = (index) => {
+  const data = emotionData.value[index]
+  if (!data || !data.emotionType) return 'transparent'
+  const opt = emotionOptions.find(o => o.value === data.emotionType)
+  return opt ? opt.color : 'transparent'
+}
+
+const getEmotionTooltip = (index) => {
+  const data = emotionData.value[index]
+  if (!data) return ''
+  const opt = emotionOptions.find(o => o.value === data.emotionType)
+  const label = opt ? opt.label : ''
+  if (data.remark) {
+    return `${label}：${data.remark}`
+  }
+  return label
+}
+
+const getEmotionLabel = (emotionType) => {
+  const opt = emotionOptions.find(o => o.value === emotionType)
+  return opt ? opt.label : ''
+}
+
+const toggleEmotionPanel = () => {
+  emotionPanelVisible.value = !emotionPanelVisible.value
+}
+
+const selectEmotion = (emotionType) => {
+  emotionForm.value.emotionType = emotionForm.value.emotionType === emotionType ? '' : emotionType
+}
+
+const openEmotionEditor = (paraIndex) => {
+  editingEmotionParagraphIndex.value = paraIndex
+  const data = emotionData.value[paraIndex] || {}
+  emotionForm.value = {
+    emotionType: data.emotionType || '',
+    remark: data.remark || ''
+  }
+  showEmotionEditor.value = true
+}
+
+const saveEmotionData = () => {
+  const paraIndex = editingEmotionParagraphIndex.value
+  if (emotionForm.value.emotionType) {
+    emotionData.value[paraIndex] = { ...emotionForm.value }
+  } else {
+    delete emotionData.value[paraIndex]
+  }
+  saveEmotion(userId, route.params.id, emotionData.value)
+  showEmotionEditor.value = false
+  ElMessage.success('情感标记已保存')
+  try {
+    if (!emotionForm.value.emotionType) {
+      deleteEmotionBand(userId, route.params.id, paraIndex)
+    } else {
+      saveEmotionBand({
+        userId,
+        manuscriptId: route.params.id,
+        paragraphIndex: paraIndex,
+        emotionType: emotionForm.value.emotionType,
+        remark: emotionForm.value.remark
+      })
+    }
+  } catch (e) {
+    console.error('保存情感色带失败', e)
+  }
+}
+
+const clearEmotion = () => {
+  emotionForm.value = { emotionType: '', remark: '' }
+}
+
+const loadEmotionData = async () => {
+  const localData = getEmotion(userId, route.params.id)
+  if (localData) {
+    emotionData.value = localData
+  }
+  try {
+    const serverData = await getEmotionBands(userId, route.params.id)
+    if (serverData) {
+      emotionData.value = serverData
+      saveEmotion(userId, route.params.id, serverData)
+    }
+  } catch (e) {
+    console.error('加载情感色带失败', e)
+  }
 }
 
 const setParagraphStatus = async (paraIndex, status) => {
@@ -496,6 +685,7 @@ const loadDetail = async () => {
     ])
     loadRhythmData()
     loadProgressData()
+    loadEmotionData()
   } catch (e) {
     console.error(e)
   } finally {
@@ -1043,5 +1233,165 @@ onMounted(() => {
 
 .detail-header {
   margin-bottom: 24px;
+}
+
+.emotion-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px auto 0;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  border-radius: 8px;
+  max-width: var(--prose-max-width);
+}
+
+.legend-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.emotion-band-sidebar {
+  position: absolute;
+  left: -36px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.emotion-band-indicator {
+  width: 6px;
+  min-height: 30px;
+  border-radius: 3px;
+  background: #e4e7ed;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.emotion-band-indicator.has-emotion {
+  width: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.emotion-band-indicator:hover {
+  transform: scaleX(1.5);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.emotion-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.emotion-add-icon {
+  font-size: 10px;
+  color: #909399;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.paragraph-with-emotion {
+  border-left: 4px solid transparent;
+  padding-left: 12px;
+  margin-left: -16px;
+  border-radius: 0 4px 4px 0;
+  transition: border-color 0.3s ease;
+}
+
+.emotion-remark-inline {
+  margin: 8px 0 20px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border-left: 4px solid #409eff;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #303133;
+  line-height: 1.6;
+}
+
+.emotion-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.emotion-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f5f7fa;
+}
+
+.emotion-option:hover {
+  background: #ecf5ff;
+  transform: translateY(-2px);
+}
+
+.emotion-option.active {
+  border-color: var(--emotion-color, #409eff);
+  background: #ecf5ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.emotion-color-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.emotion-option:hover .emotion-color-dot {
+  transform: scale(1.1);
+}
+
+.emotion-label {
+  font-size: 13px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.emotion-option.active .emotion-label {
+  color: var(--emotion-color, #409eff);
+}
+
+.type-poetry .emotion-band-sidebar {
+  left: -28px;
+}
+
+.type-poetry .paragraph-with-emotion {
+  padding-left: 8px;
+  margin-left: -12px;
 }
 </style>

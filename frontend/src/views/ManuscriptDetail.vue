@@ -247,7 +247,7 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, Edit, Check, Warning, Clock } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress } from '@/api'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex } from '@/utils/manuscript'
 
@@ -372,23 +372,28 @@ const getStatusLabel = (status) => {
 
 const setParagraphStatus = async (paraIndex, status) => {
   const currentStatus = paragraphProgress.value[paraIndex]
-  if (currentStatus === status) {
+  const unmarking = currentStatus === status
+  if (unmarking) {
     delete paragraphProgress.value[paraIndex]
   } else {
     paragraphProgress.value[paraIndex] = status
   }
-  saveProgress(route.params.id, paragraphProgress.value)
+  saveProgress(userId, route.params.id, paragraphProgress.value)
   try {
-    await saveParagraphProgress({
-      userId,
-      manuscriptId: route.params.id,
-      paragraphIndex: paraIndex,
-      status: paragraphProgress.value[paraIndex] || null
-    })
+    if (unmarking) {
+      await deleteParagraphProgress(userId, route.params.id, paraIndex)
+    } else {
+      await saveParagraphProgress({
+        userId,
+        manuscriptId: route.params.id,
+        paragraphIndex: paraIndex,
+        status
+      })
+    }
   } catch (e) {
     console.error('保存段落进度失败', e)
   }
-  ElMessage.success(currentStatus === status ? '已取消标记' : '状态已更新')
+  ElMessage.success(unmarking ? '已取消标记' : '状态已更新')
 }
 
 const isParagraphActive = (sectionIndex) => {
@@ -452,20 +457,20 @@ const saveRhythmData = () => {
   } else {
     delete rhythmData.value[paraIndex]
   }
-  saveRhythm(route.params.id, rhythmData.value)
+  saveRhythm(userId, route.params.id, rhythmData.value)
   showRhythmEditor.value = false
   ElMessage.success('节奏提示已保存')
 }
 
 const loadRhythmData = () => {
-  const data = getRhythm(route.params.id)
+  const data = getRhythm(userId, route.params.id)
   if (data) {
     rhythmData.value = data
   }
 }
 
 const loadProgressData = async () => {
-  const localData = getProgress(route.params.id)
+  const localData = getProgress(userId, route.params.id)
   if (localData) {
     paragraphProgress.value = localData
   }
@@ -473,7 +478,7 @@ const loadProgressData = async () => {
     const serverData = await getParagraphProgress(userId, route.params.id)
     if (serverData) {
       paragraphProgress.value = serverData
-      saveProgress(route.params.id, serverData)
+      saveProgress(userId, route.params.id, serverData)
     }
   } catch (e) {
     console.error('加载段落进度失败', e)

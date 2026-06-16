@@ -22,6 +22,12 @@ public class ParagraphProgressService {
     public ParagraphProgress saveOrUpdate(ParagraphProgressDTO dto) {
         Optional<ParagraphProgress> existing = paragraphProgressRepository
                 .findByUserIdAndManuscriptIdAndParagraphIndex(dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex());
+        if (dto.getStatus() == null || dto.getStatus().isBlank()) {
+            if (existing.isPresent()) {
+                paragraphProgressRepository.delete(existing.get());
+            }
+            return null;
+        }
         ParagraphProgress progress;
         if (existing.isPresent()) {
             progress = existing.get();
@@ -39,13 +45,18 @@ public class ParagraphProgressService {
         List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
         Map<Integer, String> map = new HashMap<>();
         for (ParagraphProgress p : list) {
-            map.put(p.getParagraphIndex(), p.getStatus());
+            if (p.getStatus() != null && !p.getStatus().isBlank()) {
+                map.put(p.getParagraphIndex(), p.getStatus());
+            }
         }
         return map;
     }
 
     public List<ParagraphProgress> getProgressList(Long userId, Long manuscriptId) {
-        return paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
+        List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
+        return list.stream()
+                .filter(p -> p.getStatus() != null && !p.getStatus().isBlank())
+                .toList();
     }
 
     @Transactional

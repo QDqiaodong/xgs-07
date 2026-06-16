@@ -34,9 +34,9 @@ export const removeDraft = (key) => {
   }
 }
 
-export const saveRhythm = (manuscriptId, rhythmData) => {
+export const saveRhythm = (userId, manuscriptId, rhythmData) => {
   try {
-    localStorage.setItem(RHYTHM_KEY + manuscriptId, JSON.stringify({
+    localStorage.setItem(RHYTHM_KEY + userId + '_' + manuscriptId, JSON.stringify({
       data: rhythmData,
       timestamp: Date.now()
     }))
@@ -45,9 +45,9 @@ export const saveRhythm = (manuscriptId, rhythmData) => {
   }
 }
 
-export const getRhythm = (manuscriptId) => {
+export const getRhythm = (userId, manuscriptId) => {
   try {
-    const item = localStorage.getItem(RHYTHM_KEY + manuscriptId)
+    const item = localStorage.getItem(RHYTHM_KEY + userId + '_' + manuscriptId)
     if (item) {
       const parsed = JSON.parse(item)
       return parsed.data
@@ -58,17 +58,17 @@ export const getRhythm = (manuscriptId) => {
   return {}
 }
 
-export const removeRhythm = (manuscriptId) => {
+export const removeRhythm = (userId, manuscriptId) => {
   try {
-    localStorage.removeItem(RHYTHM_KEY + manuscriptId)
+    localStorage.removeItem(RHYTHM_KEY + userId + '_' + manuscriptId)
   } catch (e) {
     console.error('删除节奏数据失败', e)
   }
 }
 
-export const saveProgress = (manuscriptId, progressData) => {
+export const saveProgress = (userId, manuscriptId, progressData) => {
   try {
-    localStorage.setItem(PROGRESS_KEY + manuscriptId, JSON.stringify({
+    localStorage.setItem(PROGRESS_KEY + userId + '_' + manuscriptId, JSON.stringify({
       data: progressData,
       timestamp: Date.now()
     }))
@@ -77,9 +77,9 @@ export const saveProgress = (manuscriptId, progressData) => {
   }
 }
 
-export const getProgress = (manuscriptId) => {
+export const getProgress = (userId, manuscriptId) => {
   try {
-    const item = localStorage.getItem(PROGRESS_KEY + manuscriptId)
+    const item = localStorage.getItem(PROGRESS_KEY + userId + '_' + manuscriptId)
     if (item) {
       const parsed = JSON.parse(item)
       return parsed.data
@@ -90,9 +90,9 @@ export const getProgress = (manuscriptId) => {
   return {}
 }
 
-export const removeProgress = (manuscriptId) => {
+export const removeProgress = (userId, manuscriptId) => {
   try {
-    localStorage.removeItem(PROGRESS_KEY + manuscriptId)
+    localStorage.removeItem(PROGRESS_KEY + userId + '_' + manuscriptId)
   } catch (e) {
     console.error('删除段落进度失败', e)
   }

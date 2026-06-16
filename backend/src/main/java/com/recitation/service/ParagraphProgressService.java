@@ -4,7 +4,6 @@ import com.recitation.dto.ParagraphProgressDTO;
 import com.recitation.entity.ParagraphProgress;
 import com.recitation.enums.ParagraphStatus;
 import com.recitation.repository.ParagraphProgressRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class ParagraphProgressService {
@@ -32,25 +30,12 @@ public class ParagraphProgressService {
         if (!ParagraphStatus.isValid(dto.getStatus())) {
             throw new IllegalArgumentException("非法的段落状态值: " + dto.getStatus() + "，允许的值为: " + ParagraphStatus.VALID_VALUES);
         }
-        try {
-            paragraphProgressRepository.deleteByUserIdAndManuscriptIdAndParagraphIndex(
-                    dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex());
-            ParagraphProgress progress = new ParagraphProgress();
-            progress.setUserId(dto.getUserId());
-            progress.setManuscriptId(dto.getManuscriptId());
-            progress.setParagraphIndex(dto.getParagraphIndex());
-            progress.setStatus(dto.getStatus());
-            return paragraphProgressRepository.save(progress);
-        } catch (DataIntegrityViolationException e) {
-            Optional<ParagraphProgress> existing = paragraphProgressRepository
-                    .findByUserIdAndManuscriptIdAndParagraphIndex(dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex());
-            if (existing.isPresent()) {
-                ParagraphProgress progress = existing.get();
-                progress.setStatus(dto.getStatus());
-                return paragraphProgressRepository.save(progress);
-            }
-            throw e;
-        }
+        paragraphProgressRepository.upsertByUniqueKey(
+                dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex(), dto.getStatus());
+        return paragraphProgressRepository
+                .findByUserIdAndManuscriptIdAndParagraphIndex(
+                        dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex())
+                .orElse(null);
     }
 
     public Map<Integer, String> getProgressMap(Long userId, Long manuscriptId) {

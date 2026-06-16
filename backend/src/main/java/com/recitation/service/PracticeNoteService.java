@@ -5,7 +5,6 @@ import com.recitation.dto.PracticeNoteDTO;
 import com.recitation.entity.Manuscript;
 import com.recitation.entity.PracticeNote;
 import com.recitation.repository.PracticeNoteRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -18,7 +17,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class PracticeNoteService {
@@ -47,28 +45,16 @@ public class PracticeNoteService {
     @Transactional
     public PracticeNote saveOrUpdate(PracticeNoteDTO dto) {
         validateManuscriptAccess(dto.getManuscriptId(), dto.getUserId());
-        try {
-            practiceNoteRepository.deleteByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId());
-            PracticeNote note = new PracticeNote();
-            note.setUserId(dto.getUserId());
-            note.setManuscriptId(dto.getManuscriptId());
-            note.setDifficultyPoints(dto.getDifficultyPoints());
-            note.setToneControl(dto.getToneControl());
-            note.setEmotionExpression(dto.getEmotionExpression());
-            note.setOtherNotes(dto.getOtherNotes());
-            return practiceNoteRepository.save(note);
-        } catch (DataIntegrityViolationException e) {
-            Optional<PracticeNote> existing = practiceNoteRepository.findByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId());
-            if (existing.isPresent()) {
-                PracticeNote note = existing.get();
-                note.setDifficultyPoints(dto.getDifficultyPoints());
-                note.setToneControl(dto.getToneControl());
-                note.setEmotionExpression(dto.getEmotionExpression());
-                note.setOtherNotes(dto.getOtherNotes());
-                return practiceNoteRepository.save(note);
-            }
-            throw e;
-        }
+        practiceNoteRepository.upsertByUniqueKey(
+                dto.getUserId(),
+                dto.getManuscriptId(),
+                dto.getDifficultyPoints(),
+                dto.getToneControl(),
+                dto.getEmotionExpression(),
+                dto.getOtherNotes());
+        return practiceNoteRepository
+                .findByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId())
+                .orElse(null);
     }
 
     public PracticeNote getNote(Long userId, Long manuscriptId) {
@@ -111,11 +97,10 @@ public class PracticeNoteService {
 
     @Transactional
     public boolean deleteNote(Long id, Long userId) {
-        Optional<PracticeNote> noteOpt = practiceNoteRepository.findById(id);
-        if (noteOpt.isEmpty()) {
+        PracticeNote note = practiceNoteRepository.findById(id).orElse(null);
+        if (note == null) {
             return false;
         }
-        PracticeNote note = noteOpt.get();
         if (!note.getUserId().equals(userId)) {
             throw new BusinessException("无权限删除该笔记");
         }

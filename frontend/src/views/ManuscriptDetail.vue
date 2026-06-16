@@ -325,7 +325,7 @@ import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, Edit, Check, Warning, Clock, MagicStick } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion } from '@/utils/storage'
-import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex } from '@/utils/manuscript'
+import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType } from '@/utils/manuscript'
 
 const route = useRoute()
 const manuscript = ref(null)
@@ -388,19 +388,7 @@ const speedOptions = ['慢速', '稍慢', '正常', '稍快', '快速']
 
 const manuscriptType = computed(() => {
   if (!manuscript.value) return 'prose'
-  const categoryName = manuscript.value.categoryName || ''
-  const content = manuscript.value.content || ''
-  
-  const poetryKeywords = ['诗', '词', '曲', '赋', '古诗', '唐诗', '宋词', '元曲', '绝句', '律诗', '乐府']
-  const isPoetryCategory = poetryKeywords.some(kw => categoryName.includes(kw))
-  
-  if (isPoetryCategory) return 'poetry'
-  
-  const lines = content.split(/\n+/).filter(l => l.trim())
-  const shortLineCount = lines.filter(l => l.trim().length <= 12).length
-  const isPoetryContent = lines.length >= 4 && shortLineCount / lines.length >= 0.6
-  
-  return isPoetryContent ? 'poetry' : 'prose'
+  return detectManuscriptType(manuscript.value.categoryName || '', manuscript.value.content || '')
 })
 
 const pauseMarginMap = {
@@ -420,11 +408,11 @@ const getParagraphMargin = (paraIndex) => {
 }
 
 const contentSections = computed(() => {
-  return splitContentSections(manuscript.value?.content)
+  return splitContentSections(manuscript.value?.content, manuscriptType.value)
 })
 
 const paragraphSections = computed(() => {
-  return getParagraphSections(manuscript.value?.content)
+  return getParagraphSections(manuscript.value?.content, manuscriptType.value)
 })
 
 const getParagraphIndex = (sectionIndex) => {

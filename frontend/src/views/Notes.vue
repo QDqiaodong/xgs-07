@@ -111,7 +111,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getParagraphProgressList } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
-import { getParagraphCount } from '@/utils/manuscript'
+import { getParagraphCount, detectManuscriptType } from '@/utils/manuscript'
 
 const router = useRouter()
 const loading = ref(false)
@@ -152,7 +152,9 @@ const loadList = async () => {
         const manuscript = await getManuscriptById(list.value[i].manuscriptId)
         list.value[i].manuscriptTitle = manuscript?.title
         const content = manuscript?.content || ''
-        const total = getParagraphCount(content)
+        const categoryName = manuscript?.categoryName || ''
+        const mType = detectManuscriptType(categoryName, content)
+        const total = getParagraphCount(content, mType)
         
         try {
           const progressList = await getParagraphProgressList(userId, list.value[i].manuscriptId)

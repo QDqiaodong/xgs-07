@@ -2,6 +2,7 @@ package com.recitation.service;
 
 import com.recitation.dto.ParagraphProgressDTO;
 import com.recitation.entity.ParagraphProgress;
+import com.recitation.enums.ParagraphStatus;
 import com.recitation.repository.ParagraphProgressRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,9 @@ public class ParagraphProgressService {
             }
             return null;
         }
+        if (!ParagraphStatus.isValid(dto.getStatus())) {
+            throw new IllegalArgumentException("非法的段落状态值: " + dto.getStatus() + "，允许的值为: " + ParagraphStatus.VALID_VALUES);
+        }
         ParagraphProgress progress;
         if (existing.isPresent()) {
             progress = existing.get();
@@ -45,7 +49,7 @@ public class ParagraphProgressService {
         List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
         Map<Integer, String> map = new HashMap<>();
         for (ParagraphProgress p : list) {
-            if (p.getStatus() != null && !p.getStatus().isBlank()) {
+            if (ParagraphStatus.isValid(p.getStatus())) {
                 map.put(p.getParagraphIndex(), p.getStatus());
             }
         }
@@ -55,7 +59,7 @@ public class ParagraphProgressService {
     public List<ParagraphProgress> getProgressList(Long userId, Long manuscriptId) {
         List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
         return list.stream()
-                .filter(p -> p.getStatus() != null && !p.getStatus().isBlank())
+                .filter(p -> ParagraphStatus.isValid(p.getStatus()))
                 .toList();
     }
 

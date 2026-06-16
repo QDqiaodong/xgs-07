@@ -156,6 +156,7 @@
                     <el-button
                       :type="getParagraphStatus(getParagraphIndex(index)) === 'mastered' ? 'success' : 'default'"
                       size="small"
+                      :loading="savingStatusMap[getParagraphIndex(index)]"
                       @click.stop="setParagraphStatus(getParagraphIndex(index), 'mastered')"
                     >
                       <el-icon><Check /></el-icon>
@@ -164,6 +165,7 @@
                     <el-button
                       :type="getParagraphStatus(getParagraphIndex(index)) === 'strengthen' ? 'warning' : 'default'"
                       size="small"
+                      :loading="savingStatusMap[getParagraphIndex(index)]"
                       @click.stop="setParagraphStatus(getParagraphIndex(index), 'strengthen')"
                     >
                       <el-icon><Warning /></el-icon>
@@ -172,6 +174,7 @@
                     <el-button
                       :type="getParagraphStatus(getParagraphIndex(index)) === 'skip' ? 'info' : 'default'"
                       size="small"
+                      :loading="savingStatusMap[getParagraphIndex(index)]"
                       @click.stop="setParagraphStatus(getParagraphIndex(index), 'skip')"
                     >
                       <el-icon><Clock /></el-icon>
@@ -289,7 +292,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showNoteDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveNote">保存</el-button>
+        <el-button type="primary" :loading="savingNote" @click="saveNote">保存</el-button>
       </template>
     </el-dialog>
 
@@ -316,7 +319,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showRhythmEditor = false">取消</el-button>
-        <el-button type="primary" @click="saveRhythmData">保存</el-button>
+        <el-button type="primary" :loading="savingRhythm" @click="saveRhythmData">保存</el-button>
       </template>
     </el-dialog>
 
@@ -349,7 +352,7 @@
       <template #footer>
         <el-button @click="clearEmotion" type="danger" plain>清除情感</el-button>
         <el-button @click="showEmotionEditor = false">取消</el-button>
-        <el-button type="primary" @click="saveEmotionData">保存</el-button>
+        <el-button type="primary" :loading="savingEmotion" @click="saveEmotionData">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -378,6 +381,11 @@ const noteForm = ref({
 })
 
 const userId = getCurrentUserId()
+
+const savingNote = ref(false)
+const savingRhythm = ref(false)
+const savingEmotion = ref(false)
+const savingStatusMap = ref({})
 
 const rhythmPanelVisible = ref(true)
 const rhythmData = ref({})
@@ -537,21 +545,23 @@ const openEmotionEditor = (paraIndex) => {
   showEmotionEditor.value = true
 }
 
-const saveEmotionData = () => {
+const saveEmotionData = async () => {
+  if (savingEmotion.value) return
+  savingEmotion.value = true
   const paraIndex = editingEmotionParagraphIndex.value
-  if (emotionForm.value.emotionType) {
-    emotionData.value[paraIndex] = { ...emotionForm.value }
-  } else {
-    delete emotionData.value[paraIndex]
-  }
-  saveEmotion(userId, route.params.id, emotionData.value)
-  showEmotionEditor.value = false
-  ElMessage.success('情感标记已保存')
   try {
-    if (!emotionForm.value.emotionType) {
-      deleteEmotionBand(userId, route.params.id, paraIndex)
+    if (emotionForm.value.emotionType) {
+      emotionData.value[paraIndex] = { ...emotionForm.value }
     } else {
-      saveEmotionBand({
+      delete emotionData.value[paraIndex]
+    }
+    saveEmotion(userId, route.params.id, emotionData.value)
+    showEmotionEditor.value = false
+    ElMessage.success('情感标记已保存')
+    if (!emotionForm.value.emotionType) {
+      await deleteEmotionBand(userId, route.params.id, paraIndex)
+    } else {
+      await saveEmotionBand({
         userId,
         manuscriptId: route.params.id,
         paragraphIndex: paraIndex,
@@ -561,6 +571,8 @@ const saveEmotionData = () => {
     }
   } catch (e) {
     console.error('保存情感色带失败', e)
+  } finally {
+    savingEmotion.value = false
   }
 }
 
@@ -585,6 +597,8 @@ const loadEmotionData = async () => {
 }
 
 const setParagraphStatus = async (paraIndex, status) => {
+  if (savingStatusMap.value[paraIndex]) return
+  savingStatusMap.value[paraIndex] = true
   const currentStatus = paragraphProgress.value[paraIndex]
   const unmarking = currentStatus === status
   if (unmarking) {
@@ -604,10 +618,22 @@ const setParagraphStatus = async (paraIndex, status) => {
         status
       })
     }
+    ElMessage.success(unmarking ? '已取消标记' : '状态已更新')
   } catch (e) {
     console.error('保存段落进度失败', e)
+    if (unmarking) {
+      paragraphProgress.value[paraIndex] = currentStatus
+    } else {
+      if (currentStatus) {
+        paragraphProgress.value[paraIndex] = currentStatus
+      } else {
+        delete paragraphProgress.value[paraIndex]
+      }
+    }
+    saveProgress(userId, route.params.id, paragraphProgress.value)
+  } finally {
+    savingStatusMap.value[paraIndex] = false
   }
-  ElMessage.success(unmarking ? '已取消标记' : '状态已更新')
 }
 
 const isParagraphActive = (sectionIndex) => {
@@ -665,6 +691,8 @@ const openRhythmEditor = (paraIndex) => {
 }
 
 const saveRhythmData = () => {
+  if (savingRhythm.value) return
+  savingRhythm.value = true
   const paraIndex = editingParagraphIndex.value
   if (rhythmForm.value.pause || rhythmForm.value.stress || rhythmForm.value.speed || rhythmForm.value.note) {
     rhythmData.value[paraIndex] = { ...rhythmForm.value }
@@ -674,6 +702,7 @@ const saveRhythmData = () => {
   saveRhythm(userId, route.params.id, rhythmData.value)
   showRhythmEditor.value = false
   ElMessage.success('节奏提示已保存')
+  savingRhythm.value = false
 }
 
 const loadRhythmData = () => {
@@ -753,6 +782,8 @@ const loadNotes = async () => {
 }
 
 const saveNote = async () => {
+  if (savingNote.value) return
+  savingNote.value = true
   try {
     await saveNoteApi({
       userId,
@@ -764,6 +795,8 @@ const saveNote = async () => {
     loadNotes()
   } catch (e) {
     console.error(e)
+  } finally {
+    savingNote.value = false
   }
 }
 

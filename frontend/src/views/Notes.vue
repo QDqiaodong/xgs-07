@@ -16,7 +16,7 @@
                 <el-icon><Edit /></el-icon>
                 编辑
               </el-button>
-              <el-button type="danger" size="small" @click="deleteNoteItem(note.id)">
+              <el-button type="danger" size="small" :loading="deletingId === note.id" @click="deleteNoteItem(note.id)">
                 <el-icon><Delete /></el-icon>
                 删除
               </el-button>
@@ -144,7 +144,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveEdit">保存</el-button>
+        <el-button type="primary" :loading="savingEdit" @click="saveEdit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -176,6 +176,8 @@ const editForm = ref({
 })
 
 const userId = getCurrentUserId()
+const savingEdit = ref(false)
+const deletingId = ref(null)
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -190,8 +192,15 @@ const loadList = async () => {
       page: page.value - 1,
       size: size.value
     })
-    list.value = res.content
-    total.value = res.totalElements
+    
+    const noteMap = new Map()
+    for (const note of res.content) {
+      if (!noteMap.has(note.manuscriptId)) {
+        noteMap.set(note.manuscriptId, note)
+      }
+    }
+    list.value = Array.from(noteMap.values())
+    total.value = list.value.length
     
     for (let i = 0; i < list.value.length; i++) {
       try {
@@ -206,10 +215,14 @@ const loadList = async () => {
           const progressList = await getParagraphProgressList(userId, list.value[i].manuscriptId)
           const stats = { mastered: 0, strengthen: 0, skip: 0, total }
           if (progressList && progressList.length > 0) {
+            const paraStatusMap = new Map()
             progressList.forEach(p => {
-              if (p.status === 'mastered') stats.mastered++
-              else if (p.status === 'strengthen') stats.strengthen++
-              else if (p.status === 'skip') stats.skip++
+              if (!paraStatusMap.has(p.paragraphIndex)) {
+                paraStatusMap.set(p.paragraphIndex, p.status)
+                if (p.status === 'mastered') stats.mastered++
+                else if (p.status === 'strengthen') stats.strengthen++
+                else if (p.status === 'skip') stats.skip++
+              }
             })
           }
           stats.percent = total > 0 ? Math.round((stats.mastered / total) * 100) : 0
@@ -246,6 +259,8 @@ const editNote = (note) => {
 }
 
 const saveEdit = async () => {
+  if (savingEdit.value) return
+  savingEdit.value = true
   try {
     await saveNote({
       userId,
@@ -260,16 +275,20 @@ const saveEdit = async () => {
     loadList()
   } catch (e) {
     console.error(e)
+  } finally {
+    savingEdit.value = false
   }
 }
 
 const deleteNoteItem = async (id) => {
+  if (deletingId.value === id) return
   try {
     await ElMessageBox.confirm('确定要删除这条笔记吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
     })
+    deletingId.value = id
     await apiDeleteNote(id, userId)
     ElMessage.success('删除成功')
     loadList()
@@ -277,6 +296,8 @@ const deleteNoteItem = async (id) => {
     if (e !== 'cancel') {
       console.error(e)
     }
+  } finally {
+    deletingId.value = null
   }
 }
 

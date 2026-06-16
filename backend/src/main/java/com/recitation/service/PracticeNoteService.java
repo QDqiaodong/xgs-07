@@ -5,14 +5,19 @@ import com.recitation.dto.PracticeNoteDTO;
 import com.recitation.entity.Manuscript;
 import com.recitation.entity.PracticeNote;
 import com.recitation.repository.PracticeNoteRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.Resource;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -42,20 +47,28 @@ public class PracticeNoteService {
     @Transactional
     public PracticeNote saveOrUpdate(PracticeNoteDTO dto) {
         validateManuscriptAccess(dto.getManuscriptId(), dto.getUserId());
-        Optional<PracticeNote> existing = practiceNoteRepository.findByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId());
-        PracticeNote note;
-        if (existing.isPresent()) {
-            note = existing.get();
-        } else {
-            note = new PracticeNote();
+        try {
+            practiceNoteRepository.deleteByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId());
+            PracticeNote note = new PracticeNote();
             note.setUserId(dto.getUserId());
             note.setManuscriptId(dto.getManuscriptId());
+            note.setDifficultyPoints(dto.getDifficultyPoints());
+            note.setToneControl(dto.getToneControl());
+            note.setEmotionExpression(dto.getEmotionExpression());
+            note.setOtherNotes(dto.getOtherNotes());
+            return practiceNoteRepository.save(note);
+        } catch (DataIntegrityViolationException e) {
+            Optional<PracticeNote> existing = practiceNoteRepository.findByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId());
+            if (existing.isPresent()) {
+                PracticeNote note = existing.get();
+                note.setDifficultyPoints(dto.getDifficultyPoints());
+                note.setToneControl(dto.getToneControl());
+                note.setEmotionExpression(dto.getEmotionExpression());
+                note.setOtherNotes(dto.getOtherNotes());
+                return practiceNoteRepository.save(note);
+            }
+            throw e;
         }
-        note.setDifficultyPoints(dto.getDifficultyPoints());
-        note.setToneControl(dto.getToneControl());
-        note.setEmotionExpression(dto.getEmotionExpression());
-        note.setOtherNotes(dto.getOtherNotes());
-        return practiceNoteRepository.save(note);
     }
 
     public PracticeNote getNote(Long userId, Long manuscriptId) {
@@ -68,7 +81,21 @@ public class PracticeNoteService {
 
     public Page<PracticeNote> getUserNotes(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return practiceNoteRepository.findByUserIdOrderByUpdateTimeDesc(userId, pageable);
+        List<PracticeNote> allNotes = practiceNoteRepository.findByUserIdOrderByUpdateTimeDesc(userId);
+        
+        Map<Long, PracticeNote> uniqueMap = new LinkedHashMap<>();
+        for (PracticeNote note : allNotes) {
+            if (!uniqueMap.containsKey(note.getManuscriptId())) {
+                uniqueMap.put(note.getManuscriptId(), note);
+            }
+        }
+        
+        List<PracticeNote> uniqueList = new ArrayList<>(uniqueMap.values());
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), uniqueList.size());
+        List<PracticeNote> pageContent = start >= uniqueList.size() ? new ArrayList<>() : uniqueList.subList(start, end);
+        
+        return new PageImpl<>(pageContent, pageable, uniqueList.size());
     }
 
     public List<PracticeNote> getManuscriptNotes(Long manuscriptId) {

@@ -34,6 +34,8 @@ export const getManuscriptNotes = (manuscriptId) => request.get(`/notes/manuscri
 
 export const deleteNote = (id, userId) => request.delete(`/notes/${id}`, { params: { userId } })
 
+export const getEmotionScoreTrend = (userId) => request.get('/notes/emotion-trend', { params: { userId } })
+
 export const saveParagraphProgress = (data) => request.post('/paragraph-progress', data)
 
 export const getParagraphProgress = (userId, manuscriptId) => request.get('/paragraph-progress', { params: { userId, manuscriptId } })

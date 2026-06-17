@@ -1,6 +1,112 @@
 <template>
   <div class="notes-page">
     <h2 class="page-title">我的练习笔记</h2>
+
+    <div class="review-section" v-if="emotionTrendData.length > 0">
+      <div class="section-header-row">
+        <h3 class="section-title">
+          <el-icon class="title-icon"><TrendCharts /></el-icon>
+          情绪控制复盘
+        </h3>
+        <span class="section-subtitle">表达稳定性变化</span>
+      </div>
+
+      <div class="stats-cards">
+        <div class="stat-card stat-average">
+          <div class="stat-icon">
+            <el-icon><Star /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">平均评分</span>
+            <span class="stat-value">{{ averageScore }}</span>
+            <span class="stat-unit">分</span>
+          </div>
+        </div>
+        <div class="stat-card stat-count">
+          <div class="stat-icon">
+            <el-icon><Document /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">已评分文稿</span>
+            <span class="stat-value">{{ emotionTrendData.length }}</span>
+            <span class="stat-unit">篇</span>
+          </div>
+        </div>
+        <div class="stat-card stat-highest">
+          <div class="stat-icon">
+            <el-icon><TrendCharts /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">最高评分</span>
+            <span class="stat-value">{{ highestScore }}</span>
+            <span class="stat-unit">分</span>
+          </div>
+        </div>
+        <div class="stat-card stat-stability">
+          <div class="stat-icon">
+            <el-icon><MagicStick /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">稳定性</span>
+            <span class="stat-value">{{ stabilityLevel }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="trend-chart-card">
+        <div class="chart-header">
+          <span class="chart-title">各文稿情绪评分趋势</span>
+          <span class="chart-hint">按更新时间排序</span>
+        </div>
+        <div class="chart-container">
+          <div class="chart-y-axis">
+            <span>10</span>
+            <span>8</span>
+            <span>6</span>
+            <span>4</span>
+            <span>2</span>
+            <span>0</span>
+          </div>
+          <div class="chart-content">
+            <div class="chart-grid">
+              <div class="grid-line" v-for="i in 5" :key="i"></div>
+            </div>
+            <div class="chart-bars">
+              <div
+                class="bar-item"
+                v-for="(item, index) in displayTrendData"
+                :key="item.id"
+                @click="goManuscript(item.manuscriptId)"
+              >
+                <div class="bar-wrapper">
+                  <div
+                    class="bar-fill"
+                    :class="getScoreClass(item.emotionControlScore)"
+                    :style="{ height: (item.emotionControlScore * 10) + '%' }"
+                  >
+                    <span class="bar-value">{{ item.emotionControlScore }}</span>
+                  </div>
+                </div>
+                <div class="bar-label" :title="item.manuscriptTitle">
+                  {{ item.manuscriptTitle?.length > 6 ? item.manuscriptTitle.slice(0, 6) + '...' : item.manuscriptTitle }}
+                </div>
+              </div>
+            </div>
+            <div class="trend-line" v-if="displayTrendData.length > 1">
+              <svg :viewBox="`0 0 ${chartWidth} 100`" preserveAspectRatio="none">
+                <polyline
+                  :points="trendLinePoints"
+                  fill="none"
+                  stroke="#409eff"
+                  stroke-width="2"
+                  stroke-dasharray="4,4"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <div class="list-content" v-loading="loading">
       <el-empty v-if="!loading && list.length === 0" description="暂无练习笔记" />
@@ -97,8 +203,22 @@
             </div>
             <div class="section-content">{{ note.otherNotes }}</div>
           </el-card>
+
+          <el-card class="section-card section-emotion-score" v-if="note.emotionControlScore">
+            <div class="section-header">
+              <el-icon class="section-icon"><Star /></el-icon>
+              <span class="section-title">情绪控制评分</span>
+              <span class="score-badge" :class="getScoreClass(note.emotionControlScore)">{{ note.emotionControlScore }}分</span>
+            </div>
+            <div class="section-content">
+              <div class="score-bar">
+                <div class="score-fill" :class="getScoreClass(note.emotionControlScore)" :style="{ width: (note.emotionControlScore * 10) + '%' }"></div>
+              </div>
+              <div class="score-note" v-if="note.emotionControlNote">{{ note.emotionControlNote }}</div>
+            </div>
+          </el-card>
           
-          <div class="empty-sections-tip" v-if="!note.difficultyPoints && !note.toneControl && !note.emotionExpression && !note.otherNotes">
+          <div class="empty-sections-tip" v-if="!note.difficultyPoints && !note.toneControl && !note.emotionExpression && !note.otherNotes && !note.emotionControlScore">
             <el-icon><InfoFilled /></el-icon>
             <span>暂无详细笔记记录，点击编辑开始记录</span>
           </div>
@@ -151,6 +271,29 @@
         <el-form-item label="其他记录">
           <el-input v-model="editForm.otherNotes" type="textarea" :rows="2" placeholder="其他练习心得、感悟等" />
         </el-form-item>
+
+        <div class="form-section-title">
+          <el-icon><Star /></el-icon>
+          <span>情绪控制评分</span>
+        </div>
+        <el-form-item label="情绪评分">
+          <div class="emotion-score-input">
+            <el-rate
+              v-model="editForm.emotionControlScore"
+              :max="10"
+              :low-threshold="3"
+              :high-threshold="7"
+              :colors="['#f56c6c', '#e6a23c', '#67c23a']"
+              :texts="['很差', '较差', '一般', '较好', '很好']"
+              show-text
+              allow-half
+            />
+            <span class="score-num" v-if="editForm.emotionControlScore">{{ editForm.emotionControlScore }} 分</span>
+          </div>
+        </el-form-item>
+        <el-form-item label="评分说明">
+          <el-input v-model="editForm.emotionControlNote" type="textarea" :rows="2" placeholder="记录本次练习情绪控制的要点、感受或改进方向" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
@@ -161,11 +304,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation } from '@element-plus/icons-vue'
-import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList } from '@/api'
+import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation, Star } from '@element-plus/icons-vue'
+import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList, getEmotionScoreTrend } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
 
 const router = useRouter()
@@ -181,12 +324,16 @@ const editForm = ref({
   difficultyPoints: '',
   toneControl: '',
   emotionExpression: '',
-  otherNotes: ''
+  otherNotes: '',
+  emotionControlScore: null,
+  emotionControlNote: ''
 })
 
 const userId = getCurrentUserId()
 const savingEdit = ref(false)
 const deletingId = ref(null)
+const emotionTrendData = ref([])
+const loadingTrend = ref(false)
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -207,6 +354,84 @@ const formatRelativeTime = (time) => {
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
   return formatTime(time)
+}
+
+const getScoreClass = (score) => {
+  if (!score) return ''
+  if (score >= 8) return 'score-high'
+  if (score >= 5) return 'score-medium'
+  return 'score-low'
+}
+
+const averageScore = computed(() => {
+  if (emotionTrendData.value.length === 0) return '0.0'
+  const sum = emotionTrendData.value.reduce((acc, item) => acc + (item.emotionControlScore || 0), 0)
+  return (sum / emotionTrendData.value.length).toFixed(1)
+})
+
+const highestScore = computed(() => {
+  if (emotionTrendData.value.length === 0) return '0'
+  const scores = emotionTrendData.value.map(item => item.emotionControlScore || 0)
+  return Math.max(...scores)
+})
+
+const stabilityLevel = computed(() => {
+  if (emotionTrendData.value.length < 2) return '暂无数据'
+  const scores = emotionTrendData.value.map(item => item.emotionControlScore || 0)
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+  const variance = scores.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / scores.length
+  const stdDev = Math.sqrt(variance)
+  if (stdDev < 1) return '很稳定'
+  if (stdDev < 2) return '较稳定'
+  if (stdDev < 3) return '一般'
+  return '需提升'
+})
+
+const displayTrendData = computed(() => {
+  const data = [...emotionTrendData.value].reverse()
+  return data.slice(-10)
+})
+
+const chartWidth = computed(() => {
+  const count = displayTrendData.value.length
+  return Math.max(count * 60, 200)
+})
+
+const trendLinePoints = computed(() => {
+  const data = displayTrendData.value
+  if (data.length < 2) return ''
+  const points = data.map((item, index) => {
+    const x = (index / (data.length - 1)) * chartWidth.value
+    const y = 100 - (item.emotionControlScore || 0) * 10
+    return `${x},${y}`
+  })
+  return points.join(' ')
+})
+
+const loadEmotionTrend = async () => {
+  loadingTrend.value = true
+  try {
+    const trendList = await getEmotionScoreTrend(userId)
+    const result = []
+    for (const note of trendList) {
+      try {
+        const manuscript = await getManuscriptById(note.manuscriptId)
+        if (manuscript && manuscript.status === 1) {
+          result.push({
+            ...note,
+            manuscriptTitle: manuscript.title
+          })
+        }
+      } catch (e) {
+        console.error('加载文稿信息失败', e)
+      }
+    }
+    emotionTrendData.value = result
+  } catch (e) {
+    console.error('加载情绪评分趋势失败', e)
+  } finally {
+    loadingTrend.value = false
+  }
 }
 
 const loadList = async () => {
@@ -305,7 +530,9 @@ const editNote = (note) => {
     difficultyPoints: note.difficultyPoints || '',
     toneControl: note.toneControl || '',
     emotionExpression: note.emotionExpression || '',
-    otherNotes: note.otherNotes || ''
+    otherNotes: note.otherNotes || '',
+    emotionControlScore: note.emotionControlScore || null,
+    emotionControlNote: note.emotionControlNote || ''
   }
   showEditDialog.value = true
 }
@@ -320,11 +547,14 @@ const saveEdit = async () => {
       difficultyPoints: editForm.value.difficultyPoints,
       toneControl: editForm.value.toneControl,
       emotionExpression: editForm.value.emotionExpression,
-      otherNotes: editForm.value.otherNotes
+      otherNotes: editForm.value.otherNotes,
+      emotionControlScore: editForm.value.emotionControlScore,
+      emotionControlNote: editForm.value.emotionControlNote
     })
     ElMessage.success('保存成功')
     showEditDialog.value = false
     loadList()
+    loadEmotionTrend()
   } catch (e) {
     console.error(e)
   } finally {
@@ -344,6 +574,7 @@ const deleteNoteItem = async (id) => {
     await apiDeleteNote(id, userId)
     ElMessage.success('删除成功')
     loadList()
+    loadEmotionTrend()
   } catch (e) {
     if (e !== 'cancel') {
       console.error(e)
@@ -355,6 +586,7 @@ const deleteNoteItem = async (id) => {
 
 onMounted(() => {
   loadList()
+  loadEmotionTrend()
 })
 </script>
 
@@ -368,6 +600,275 @@ onMounted(() => {
   font-size: 24px;
   margin-bottom: 24px;
   color: #303133;
+}
+
+.review-section {
+  margin-bottom: 32px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.section-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.section-header-row .section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  color: #409eff;
+  font-size: 24px;
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: #909399;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.stat-average .stat-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.stat-count .stat-icon {
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+  color: #fff;
+}
+
+.stat-highest .stat-icon {
+  background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+  color: #fff;
+}
+
+.stat-stability .stat-icon {
+  background: linear-gradient(135deg, #e6a23c 0%, #f0c78a 100%);
+  color: #fff;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #303133;
+  line-height: 1;
+}
+
+.stat-unit {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+.trend-chart-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.chart-hint {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+.chart-container {
+  display: flex;
+  gap: 12px;
+  height: 220px;
+}
+
+.chart-y-axis {
+  width: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #c0c4cc;
+  text-align: right;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.chart-content {
+  flex: 1;
+  position: relative;
+  overflow-x: auto;
+}
+
+.chart-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.grid-line {
+  height: 1px;
+  background: #f0f2f5;
+}
+
+.chart-bars {
+  display: flex;
+  gap: 16px;
+  height: calc(100% - 24px);
+  align-items: flex-end;
+  padding: 0 8px;
+  min-width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.bar-item {
+  flex: 1;
+  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bar-item:hover {
+  transform: scale(1.05);
+}
+
+.bar-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar-fill {
+  width: 28px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+  transition: all 0.3s ease;
+  min-height: 4px;
+}
+
+.bar-fill.score-high {
+  background: linear-gradient(180deg, #85ce61 0%, #67c23a 100%);
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+}
+
+.bar-fill.score-medium {
+  background: linear-gradient(180deg, #f0c78a 0%, #e6a23c 100%);
+  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+}
+
+.bar-fill.score-low {
+  background: linear-gradient(180deg, #f89898 0%, #f56c6c 100%);
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.3);
+}
+
+.bar-value {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.bar-label {
+  font-size: 11px;
+  color: #909399;
+  text-align: center;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-line {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: calc(100% - 24px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.trend-line svg {
+  width: 100%;
+  height: 100%;
 }
 
 .note-card-wrapper {
@@ -594,6 +1095,84 @@ onMounted(() => {
 .section-other .section-content {
   background: linear-gradient(135deg, #ffffff 0%, #fefaf5 100%);
   border-left: 3px solid #e6a23c;
+}
+
+.section-emotion-score .section-header {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  color: #fa8c16;
+}
+
+.section-emotion-score .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+  border-left: 3px solid #fa8c16;
+}
+
+.score-badge {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.score-badge.score-high {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.score-badge.score-medium {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+
+.score-badge.score-low {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.score-bar {
+  height: 8px;
+  background: #f0f2f5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.score-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.score-fill.score-high {
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+}
+
+.score-fill.score-medium {
+  background: linear-gradient(90deg, #e6a23c 0%, #f0c78a 100%);
+}
+
+.score-fill.score-low {
+  background: linear-gradient(90deg, #f56c6c 0%, #f89898 100%);
+}
+
+.score-note {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.emotion-score-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
 }
 
 .empty-sections-tip {

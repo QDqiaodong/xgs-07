@@ -51,7 +51,9 @@ public class PracticeNoteService {
                 dto.getDifficultyPoints(),
                 dto.getToneControl(),
                 dto.getEmotionExpression(),
-                dto.getOtherNotes());
+                dto.getOtherNotes(),
+                dto.getEmotionControlScore(),
+                dto.getEmotionControlNote());
         return practiceNoteRepository
                 .findByUserIdAndManuscriptId(dto.getUserId(), dto.getManuscriptId())
                 .orElse(null);
@@ -109,5 +111,19 @@ public class PracticeNoteService {
         }
         practiceNoteRepository.deleteById(id);
         return true;
+    }
+
+    public List<PracticeNote> getUserEmotionScoreTrend(Long userId) {
+        List<PracticeNote> allNotes = practiceNoteRepository.findByUserIdOrderByUpdateTimeDesc(userId);
+        List<PracticeNote> result = new ArrayList<>();
+        for (PracticeNote note : allNotes) {
+            if (note.getEmotionControlScore() != null) {
+                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId());
+                if (manuscript != null && manuscript.getStatus() == 1) {
+                    result.add(note);
+                }
+            }
+        }
+        return result;
     }
 }

@@ -51,4 +51,9 @@ public class PracticeNoteController {
         }
         return Result.success();
     }
+
+    @GetMapping("/emotion-trend")
+    public Result<List<PracticeNote>> getEmotionScoreTrend(@RequestParam Long userId) {
+        return Result.success(practiceNoteService.getUserEmotionScoreTrend(userId));
+    }
 }

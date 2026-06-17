@@ -26,17 +26,20 @@ public interface PracticeNoteRepository extends JpaRepository<PracticeNote, Long
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query(value = "INSERT INTO practice_note (user_id, manuscript_id, difficulty_points, tone_control, emotion_expression, other_notes, create_time, update_time) " +
-            "VALUES (:userId, :manuscriptId, :difficultyPoints, :toneControl, :emotionExpression, :otherNotes, NOW(), NOW()) " +
+    @Query(value = "INSERT INTO practice_note (user_id, manuscript_id, difficulty_points, tone_control, emotion_expression, other_notes, emotion_control_score, emotion_control_note, create_time, update_time) " +
+            "VALUES (:userId, :manuscriptId, :difficultyPoints, :toneControl, :emotionExpression, :otherNotes, :emotionControlScore, :emotionControlNote, NOW(), NOW()) " +
             "ON DUPLICATE KEY UPDATE difficulty_points = VALUES(difficulty_points), tone_control = VALUES(tone_control), " +
-            "emotion_expression = VALUES(emotion_expression), other_notes = VALUES(other_notes), update_time = NOW()",
+            "emotion_expression = VALUES(emotion_expression), other_notes = VALUES(other_notes), " +
+            "emotion_control_score = VALUES(emotion_control_score), emotion_control_note = VALUES(emotion_control_note), update_time = NOW()",
             nativeQuery = true)
     void upsertByUniqueKey(@Param("userId") Long userId,
                            @Param("manuscriptId") Long manuscriptId,
                            @Param("difficultyPoints") String difficultyPoints,
                            @Param("toneControl") String toneControl,
                            @Param("emotionExpression") String emotionExpression,
-                           @Param("otherNotes") String otherNotes);
+                           @Param("otherNotes") String otherNotes,
+                           @Param("emotionControlScore") Integer emotionControlScore,
+                           @Param("emotionControlNote") String emotionControlNote);
 
     @Modifying
     @Transactional

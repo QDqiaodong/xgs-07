@@ -39,6 +39,11 @@ public class PracticeNote {
     @Column(columnDefinition = "TEXT")
     private String otherNotes;
 
+    private Integer emotionControlScore;
+
+    @Column(columnDefinition = "TEXT")
+    private String emotionControlNote;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createTime;

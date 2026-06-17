@@ -21,4 +21,8 @@ public class PracticeNoteDTO {
     private String emotionExpression;
 
     private String otherNotes;
+
+    private Integer emotionControlScore;
+
+    private String emotionControlNote;
 }

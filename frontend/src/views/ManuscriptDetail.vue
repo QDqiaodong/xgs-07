@@ -19,7 +19,7 @@
             <el-icon><Star :fill="isFavorited ? '#67c23a' : 'none'" /></el-icon>
             {{ isFavorited ? '已收藏' : '收藏' }}
           </el-button>
-          <el-button type="primary" @click="showNoteDialog = true">
+          <el-button type="primary" @click="openNoteDialog">
             <el-icon><EditPen /></el-icon>
             记录笔记
           </el-button>
@@ -278,6 +278,20 @@
                 </div>
                 <div class="section-content">{{ note.otherNotes }}</div>
               </div>
+
+              <div class="section-item section-emotion-score" v-if="note.emotionControlScore">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Star /></el-icon>
+                  <span class="section-title">情绪控制评分</span>
+                  <span class="score-badge" :class="getScoreClass(note.emotionControlScore)">{{ note.emotionControlScore }}分</span>
+                </div>
+                <div class="section-content">
+                  <div class="score-bar">
+                    <div class="score-fill" :class="getScoreClass(note.emotionControlScore)" :style="{ width: (note.emotionControlScore * 10) + '%' }"></div>
+                  </div>
+                  <div class="score-note" v-if="note.emotionControlNote">{{ note.emotionControlNote }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -382,6 +396,29 @@
         <el-form-item label="其他记录">
           <el-input v-model="noteForm.otherNotes" type="textarea" :rows="2" placeholder="其他练习心得、感悟等" />
         </el-form-item>
+
+        <div class="form-section-title">
+          <el-icon><Star /></el-icon>
+          <span>情绪控制评分</span>
+        </div>
+        <el-form-item label="情绪评分">
+          <div class="emotion-score-input">
+            <el-rate
+              v-model="noteForm.emotionControlScore"
+              :max="10"
+              :low-threshold="3"
+              :high-threshold="7"
+              :colors="['#f56c6c', '#e6a23c', '#67c23a']"
+              :texts="['很差', '较差', '一般', '较好', '很好']"
+              show-text
+              allow-half
+            />
+            <span class="score-num" v-if="noteForm.emotionControlScore">{{ noteForm.emotionControlScore }} 分</span>
+          </div>
+        </el-form-item>
+        <el-form-item label="评分说明">
+          <el-input v-model="noteForm.emotionControlNote" type="textarea" :rows="2" placeholder="记录本次练习情绪控制的要点、感受或改进方向" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showNoteDialog = false">取消</el-button>
@@ -455,8 +492,8 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star } from '@element-plus/icons-vue'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
@@ -472,7 +509,9 @@ const noteForm = ref({
   difficultyPoints: '',
   toneControl: '',
   emotionExpression: '',
-  otherNotes: ''
+  otherNotes: '',
+  emotionControlScore: null,
+  emotionControlNote: ''
 })
 
 const userId = getCurrentUserId()
@@ -934,8 +973,34 @@ const saveNote = async () => {
   }
 }
 
+const openNoteDialog = async () => {
+  try {
+    const existingNote = await getNote(userId, route.params.id)
+    if (existingNote) {
+      noteForm.value = {
+        difficultyPoints: existingNote.difficultyPoints || '',
+        toneControl: existingNote.toneControl || '',
+        emotionExpression: existingNote.emotionExpression || '',
+        otherNotes: existingNote.otherNotes || '',
+        emotionControlScore: existingNote.emotionControlScore || null,
+        emotionControlNote: existingNote.emotionControlNote || ''
+      }
+    }
+  } catch (e) {
+    console.error('加载笔记失败', e)
+  }
+  showNoteDialog.value = true
+}
+
 const goAuthorProfile = (author) => {
   router.push(`/author/${encodeURIComponent(author)}`)
+}
+
+const getScoreClass = (score) => {
+  if (!score) return ''
+  if (score >= 8) return 'score-high'
+  if (score >= 5) return 'score-medium'
+  return 'score-low'
 }
 
 onMounted(() => {
@@ -1998,5 +2063,83 @@ onMounted(() => {
   vertical-align: middle;
   opacity: 0.8;
   font-style: normal;
+}
+
+.section-emotion-score .section-header {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  color: #fa8c16;
+}
+
+.section-emotion-score .section-content {
+  background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+  border-left: 3px solid #fa8c16;
+}
+
+.score-badge {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.score-badge.score-high {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.score-badge.score-medium {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+
+.score-badge.score-low {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.score-bar {
+  height: 8px;
+  background: #f0f2f5;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.score-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.score-fill.score-high {
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+}
+
+.score-fill.score-medium {
+  background: linear-gradient(90deg, #e6a23c 0%, #f0c78a 100%);
+}
+
+.score-fill.score-low {
+  background: linear-gradient(90deg, #f56c6c 0%, #f89898 100%);
+}
+
+.score-note {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.emotion-score-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
 }
 </style>

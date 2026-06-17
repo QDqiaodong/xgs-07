@@ -86,7 +86,7 @@
               <el-tag size="small" :type="manuscriptType === 'poetry' ? 'warning' : 'info'">
                 {{ manuscriptType === 'poetry' ? '古诗词' : '散文' }}
               </el-tag>
-              <span v-if="manuscript.difficulty" class="meta-item">难度：{{ manuscript.difficulty }}</span>
+              <DifficultyBadge v-if="manuscript.difficulty" :difficulty="manuscript.difficulty" />
               <span v-if="manuscript.author" class="meta-item">作者：{{ manuscript.author }}</span>
               <span class="meta-item">浏览：{{ manuscript.viewCount }}</span>
               <span class="meta-item">收藏：{{ manuscript.favoriteCount }}</span>
@@ -459,6 +459,7 @@ import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
+import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const route = useRoute()
 const manuscript = ref(null)

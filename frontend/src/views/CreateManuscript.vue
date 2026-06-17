@@ -28,11 +28,13 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="难度">
-              <el-select v-model="form.difficulty" placeholder="请选择难度" style="width: 100%">
-                <el-option label="入门" value="入门" />
-                <el-option label="初级" value="初级" />
-                <el-option label="中级" value="中级" />
-                <el-option label="高级" value="高级" />
+              <el-select v-model="form.difficulty" placeholder="请选择难度" style="width: 100%" popper-class="difficulty-select-popper">
+                <el-option v-for="opt in difficultyOptions" :key="opt.value" :label="opt.label" :value="opt.value">
+                  <div class="difficulty-option">
+                    <span :class="['diff-tag', 'diff-' + opt.level]">{{ opt.label }} Lv.{{ opt.level }}</span>
+                    <span class="diff-desc">{{ opt.description }}</span>
+                  </div>
+                </el-option>
               </el-select>
             </el-form-item>
           </el-col>
@@ -101,6 +103,13 @@ const formRef = ref(null)
 const submitting = ref(false)
 const categories = ref([])
 const isEdit = computed(() => !!route.params.id)
+
+const difficultyOptions = [
+  { value: '入门', label: '入门', level: 1, description: '短句多、用词简单' },
+  { value: '初级', label: '初级', level: 2, description: '句式常规、无生僻字' },
+  { value: '中级', label: '中级', level: 3, description: '含长句、绕口词' },
+  { value: '高级', label: '高级', level: 4, description: '多音字多、情感复杂' }
+]
 const draftKey = computed(() => isEdit.value ? `edit_${route.params.id}` : 'new')
 
 const form = ref({
@@ -276,5 +285,60 @@ onUnmounted(() => {
 .word-count {
   font-size: 13px;
   color: #909399;
+}
+
+.difficulty-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.diff-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.diff-tag.diff-1 {
+  color: #67c23a;
+  background: #f0f9eb;
+  border-color: #c2e7b0;
+}
+
+.diff-tag.diff-2 {
+  color: #409eff;
+  background: #ecf5ff;
+  border-color: #b3d8ff;
+}
+
+.diff-tag.diff-3 {
+  color: #e6a23c;
+  background: #fdf6ec;
+  border-color: #f5dab1;
+}
+
+.diff-tag.diff-4 {
+  color: #f56c6c;
+  background: #fef0f0;
+  border-color: #fbc4c4;
+}
+
+.diff-desc {
+  font-size: 13px;
+  color: #606266;
+}
+</style>
+
+<style>
+.difficulty-select-popper .el-select-dropdown__item {
+  height: auto;
+  padding: 8px 16px;
+  line-height: 1.5;
 }
 </style>

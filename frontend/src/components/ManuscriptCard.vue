@@ -3,7 +3,7 @@
     <div class="card-content" @click="goDetail">
       <div class="card-header">
         <el-tag :type="tagType" size="small">{{ manuscript.categoryName }}</el-tag>
-        <span v-if="manuscript.difficulty" class="difficulty">{{ manuscript.difficulty }}</span>
+        <DifficultyBadge v-if="manuscript.difficulty" :difficulty="manuscript.difficulty" size="small" />
       </div>
       <h3 class="title text-ellipsis">{{ manuscript.title }}</h3>
       <p v-if="manuscript.introduction" class="intro text-ellipsis-2">{{ manuscript.introduction }}</p>
@@ -31,6 +31,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const props = defineProps({
   manuscript: {
@@ -72,11 +73,6 @@ const goDetail = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-}
-
-.difficulty {
-  font-size: 12px;
-  color: #909399;
 }
 
 .title {

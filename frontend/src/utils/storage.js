@@ -2,6 +2,7 @@ const DRAFT_KEY = 'recitation_draft_'
 const RHYTHM_KEY = 'recitation_rhythm_'
 const PROGRESS_KEY = 'recitation_progress_'
 const EMOTION_KEY = 'recitation_emotion_'
+const DIFFICULTY_KEY = 'recitation_difficulty_'
 
 export const saveDraft = (key, data) => {
   try {
@@ -133,4 +134,36 @@ export const removeEmotion = (userId, manuscriptId) => {
 
 export const getCurrentUserId = () => {
   return 1
+}
+
+export const saveDifficulty = (userId, manuscriptId, difficultyData) => {
+  try {
+    localStorage.setItem(DIFFICULTY_KEY + userId + '_' + manuscriptId, JSON.stringify({
+      data: difficultyData,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.error('保存难点标注数据失败', e)
+  }
+}
+
+export const getDifficulty = (userId, manuscriptId) => {
+  try {
+    const item = localStorage.getItem(DIFFICULTY_KEY + userId + '_' + manuscriptId)
+    if (item) {
+      const parsed = JSON.parse(item)
+      return parsed.data
+    }
+  } catch (e) {
+    console.error('读取难点标注数据失败', e)
+  }
+  return null
+}
+
+export const removeDifficulty = (userId, manuscriptId) => {
+  try {
+    localStorage.removeItem(DIFFICULTY_KEY + userId + '_' + manuscriptId)
+  } catch (e) {
+    console.error('删除难点标注数据失败', e)
+  }
 }

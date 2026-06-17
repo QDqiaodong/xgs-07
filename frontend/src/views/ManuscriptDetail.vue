@@ -11,6 +11,10 @@
             <el-icon><Tickets /></el-icon>
             节奏板
           </el-button>
+          <el-button :type="difficultyPanelVisible ? 'warning' : 'primary'" @click="toggleDifficultyPanel">
+            <el-icon><Warning /></el-icon>
+            难点标注
+          </el-button>
           <el-button :type="isFavorited ? 'success' : 'primary'" @click="toggleFavorite">
             <el-icon><Star :fill="isFavorited ? '#67c23a' : 'none'" /></el-icon>
             {{ isFavorited ? '已收藏' : '收藏' }}
@@ -116,6 +120,25 @@
                 {{ opt.label }}
               </span>
             </div>
+            <div class="difficulty-legend" v-if="difficultyPanelVisible">
+              <span class="legend-title">难点标注：</span>
+              <span class="legend-item">
+                <span class="legend-color diff-legend-long"></span>
+                长句 ({{ difficultyStats.long }})
+              </span>
+              <span class="legend-item">
+                <span class="legend-color diff-legend-tongue"></span>
+                绕口句 ({{ difficultyStats.tongue }})
+              </span>
+              <span class="legend-item">
+                <span class="legend-color diff-legend-breath"></span>
+                换气点 ({{ difficultyStats.breath }})
+              </span>
+              <span class="legend-item">
+                <span class="legend-color diff-legend-misread"></span>
+                易读错词 ({{ difficultyStats.misread }})
+              </span>
+            </div>
             <p v-if="manuscript.introduction" class="introduction">{{ manuscript.introduction }}</p>
           </div>
 
@@ -199,7 +222,12 @@
                     marginBottom: getParagraphMargin(getParagraphIndex(index)),
                     borderLeftColor: getEmotionColor(getParagraphIndex(index))
                   }"
-                >{{ section.content }}</div>
+                >
+                  <template v-if="difficultyPanelVisible && difficultyAnalysis[getParagraphIndex(index)]">
+                    <span v-html="getAnnotatedContent(getParagraphIndex(index))"></span>
+                  </template>
+                  <template v-else>{{ section.content }}</template>
+                </div>
               </div>
               <div v-else-if="section.type === 'heading'" class="section-heading">{{ section.content }}</div>
               <div v-if="section.type === 'paragraph' && rhythmData[getParagraphIndex(index)]?.note" class="rhythm-note-inline">
@@ -253,6 +281,71 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="difficulty-panel" :class="{ collapsed: !difficultyPanelVisible }" v-if="manuscript">
+        <div class="difficulty-panel-header">
+          <span class="difficulty-panel-title">难点句标注</span>
+          <el-button type="text" size="small" @click="difficultyPanelVisible = false" class="collapse-btn">
+            <el-icon><ArrowLeft /></el-icon>
+          </el-button>
+        </div>
+        <div class="difficulty-stats-bar">
+          <div class="diff-stat-item diff-stat-long">
+            <span class="diff-stat-num">{{ difficultyStats.long }}</span>
+            <span class="diff-stat-label">长句</span>
+          </div>
+          <div class="diff-stat-item diff-stat-tongue">
+            <span class="diff-stat-num">{{ difficultyStats.tongue }}</span>
+            <span class="diff-stat-label">绕口句</span>
+          </div>
+          <div class="diff-stat-item diff-stat-breath">
+            <span class="diff-stat-num">{{ difficultyStats.breath }}</span>
+            <span class="diff-stat-label">换气点</span>
+          </div>
+          <div class="diff-stat-item diff-stat-misread">
+            <span class="diff-stat-num">{{ difficultyStats.misread }}</span>
+            <span class="diff-stat-label">易读错</span>
+          </div>
+        </div>
+        <div class="difficulty-list">
+          <template v-for="(analysis, pIndex) in difficultyAnalysis" :key="pIndex">
+            <div class="difficulty-group" v-if="analysis && analysis.hasAny">
+              <div class="difficulty-group-header" @click="scrollToParagraph(pIndex)">
+                <span class="diff-group-num">第 {{ pIndex + 1 }} 段</span>
+                <el-icon class="diff-group-arrow"><ArrowRight /></el-icon>
+              </div>
+              <div class="difficulty-group-items">
+                <div v-for="(s, sIdx) in analysis.longSentences" :key="'long-' + sIdx" class="diff-item diff-item-long">
+                  <span class="diff-item-badge">长句</span>
+                  <span class="diff-item-text">{{ s.text.length > 50 ? s.text.slice(0, 50) + '...' : s.text }}</span>
+                </div>
+                <div v-for="(s, sIdx) in analysis.tongueTwisters" :key="'tongue-' + sIdx" class="diff-item diff-item-tongue">
+                  <span class="diff-item-badge">绕口</span>
+                  <span class="diff-item-text">{{ s.text.length > 50 ? s.text.slice(0, 50) + '...' : s.text }}</span>
+                </div>
+                <div v-for="(m, mIdx) in analysis.misreadWords" :key="'misread-' + mIdx" class="diff-item diff-item-misread">
+                  <span class="diff-item-badge">易读错</span>
+                  <span class="diff-item-word">{{ m.word }}</span>
+                  <span class="diff-item-note">{{ m.note }}</span>
+                </div>
+                <div v-if="analysis.breathingPoints.length > 0" class="diff-item diff-item-breath">
+                  <span class="diff-item-badge">换气</span>
+                  <span class="diff-item-text">本段含 {{ analysis.breathingPoints.length }} 个换气点</span>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-if="difficultyStats.long + difficultyStats.tongue + difficultyStats.breath + difficultyStats.misread === 0" class="no-difficulty-tip">
+            <el-icon><CircleCheck /></el-icon>
+            <span>本文未检测到明显朗读难点</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="difficulty-expand-btn" v-if="!difficultyPanelVisible" @click="difficultyPanelVisible = true">
+        <el-icon><Warning /></el-icon>
+        <span>难点</span>
       </div>
     </div>
 
@@ -362,10 +455,10 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone } from '@element-plus/icons-vue'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
-import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion } from '@/utils/storage'
-import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType } from '@/utils/manuscript'
+import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty } from '@/utils/storage'
+import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 
 const route = useRoute()
 const manuscript = ref(null)
@@ -409,6 +502,10 @@ const emotionForm = ref({
   emotionType: '',
   remark: ''
 })
+
+const difficultyPanelVisible = ref(false)
+const difficultyAnalysis = ref({})
+const difficultyStats = ref({ long: 0, tongue: 0, breath: 0, misread: 0 })
 
 const emotionOptions = [
   { value: 'calm', label: '平缓', color: '#909399' },
@@ -529,6 +626,41 @@ const getEmotionLabel = (emotionType) => {
 
 const toggleEmotionPanel = () => {
   emotionPanelVisible.value = !emotionPanelVisible.value
+}
+
+const toggleDifficultyPanel = () => {
+  difficultyPanelVisible.value = !difficultyPanelVisible.value
+  if (difficultyPanelVisible.value && manuscript.value) {
+    loadDifficultyAnalysis()
+  }
+}
+
+const loadDifficultyAnalysis = () => {
+  if (!manuscript.value?.content) return
+  const savedData = getDifficulty(userId, route.params.id)
+  if (savedData) {
+    difficultyAnalysis.value = savedData.analysis || {}
+    difficultyStats.value = savedData.stats || { long: 0, tongue: 0, breath: 0, misread: 0 }
+    return
+  }
+  const result = analyzeDifficultContent(manuscript.value.content)
+  const analysisMap = {}
+  const paraSections = paragraphSections.value
+  result.paragraphs.forEach((p, idx) => {
+    if (idx < paraSections.length) {
+      analysisMap[idx] = p
+    }
+  })
+  difficultyAnalysis.value = analysisMap
+  difficultyStats.value = result.stats
+  saveDifficulty(userId, route.params.id, { analysis: analysisMap, stats: result.stats })
+}
+
+const getAnnotatedContent = (paraIndex) => {
+  const analysis = difficultyAnalysis.value[paraIndex]
+  const content = paragraphSections.value[paraIndex]?.content
+  if (!analysis || !content) return content || ''
+  return renderAnnotatedHtml(content, analysis)
 }
 
 const selectEmotion = (emotionType) => {
@@ -1543,5 +1675,311 @@ onMounted(() => {
 .type-poetry .paragraph-with-emotion {
   padding-left: 8px;
   margin-left: -12px;
+}
+
+.difficulty-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 16px auto 0;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fef9f0 0%, #fdf0e6 100%);
+  border-radius: 8px;
+  max-width: var(--prose-max-width);
+}
+
+.diff-legend-long {
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%) !important;
+}
+
+.diff-legend-tongue {
+  background: linear-gradient(135deg, #e6a23c 0%, #f0c78a 100%) !important;
+}
+
+.diff-legend-breath {
+  background: linear-gradient(135deg, #67c23a 0%, #95d475 100%) !important;
+}
+
+.diff-legend-misread {
+  background: linear-gradient(135deg, #f56c6c 0%, #f89898 100%) !important;
+}
+
+.difficulty-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.difficulty-panel.collapsed {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.difficulty-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
+  color: #fff;
+}
+
+.difficulty-panel-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.difficulty-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 12px;
+  gap: 8px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.diff-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: #f5f7fa;
+}
+
+.diff-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.diff-stat-label {
+  font-size: 11px;
+  color: #909399;
+}
+
+.diff-stat-item.diff-stat-long .diff-stat-num {
+  color: #409eff;
+}
+
+.diff-stat-item.diff-stat-tongue .diff-stat-num {
+  color: #e6a23c;
+}
+
+.diff-stat-item.diff-stat-breath .diff-stat-num {
+  color: #67c23a;
+}
+
+.diff-stat-item.diff-stat-misread .diff-stat-num {
+  color: #f56c6c;
+}
+
+.difficulty-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.difficulty-group {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #f0f2f5;
+  transition: all 0.2s ease;
+}
+
+.difficulty-group:hover {
+  border-color: #e6a23c;
+  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.15);
+}
+
+.difficulty-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #fef9f0 0%, #fdf0e6 100%);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.difficulty-group-header:hover {
+  background: linear-gradient(135deg, #fdf0e6 0%, #fce4d0 100%);
+}
+
+.diff-group-num {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6a23c;
+}
+
+.diff-group-arrow {
+  font-size: 14px;
+  color: #e6a23c;
+}
+
+.difficulty-group-items {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diff-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-item-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.diff-item-long {
+  background: #ecf5ff;
+}
+
+.diff-item-long .diff-item-badge {
+  background: #409eff;
+}
+
+.diff-item-tongue {
+  background: #fdf6ec;
+}
+
+.diff-item-tongue .diff-item-badge {
+  background: #e6a23c;
+}
+
+.diff-item-breath {
+  background: #f0f9eb;
+}
+
+.diff-item-breath .diff-item-badge {
+  background: #67c23a;
+}
+
+.diff-item-misread {
+  background: #fef0f0;
+  flex-wrap: wrap;
+}
+
+.diff-item-misread .diff-item-badge {
+  background: #f56c6c;
+}
+
+.diff-item-word {
+  font-weight: 700;
+  color: #f56c6c;
+}
+
+.diff-item-note {
+  color: #909399;
+  font-size: 11px;
+}
+
+.diff-item-text {
+  color: #606266;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.no-difficulty-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: #c0c4cc;
+  font-size: 14px;
+}
+
+.no-difficulty-tip .el-icon {
+  font-size: 40px;
+  color: #67c23a;
+}
+
+.difficulty-expand-btn {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
+  color: #fff;
+  padding: 16px 8px;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  writing-mode: vertical-rl;
+  z-index: 100;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.difficulty-expand-btn:hover {
+  padding-left: 12px;
+}
+
+.paragraph :deep(.diff-long) {
+  background: rgba(64, 158, 255, 0.12);
+  border-bottom: 2px solid #409eff;
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.paragraph :deep(.diff-tongue) {
+  background: rgba(230, 162, 60, 0.12);
+  border-bottom: 2px solid #e6a23c;
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.paragraph :deep(.diff-misread) {
+  border-bottom: 2px wavy #f56c6c;
+  cursor: help;
+  padding: 1px 2px;
+  position: relative;
+}
+
+.paragraph :deep(.diff-misread:hover) {
+  background: rgba(245, 108, 108, 0.08);
+}
+
+.paragraph :deep(.diff-breath-mark) {
+  display: inline-block;
+  font-size: 10px;
+  color: #67c23a;
+  margin: 0 1px;
+  vertical-align: middle;
+  opacity: 0.8;
+  font-style: normal;
 }
 </style>

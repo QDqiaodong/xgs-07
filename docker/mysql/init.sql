@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS practice_note (
     other_notes TEXT,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_manuscript (user_id, manuscript_id),
     INDEX idx_manuscript (manuscript_id),
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS paragraph_progress (
     status VARCHAR(20),
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_manuscript_paragraph (user_id, manuscript_id, paragraph_index),
     INDEX idx_user_manuscript (user_id, manuscript_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

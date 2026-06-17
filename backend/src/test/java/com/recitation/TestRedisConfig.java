@@ -1,11 +1,10 @@
 package com.recitation;
 
+import com.recitation.service.RedisCacheService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import static org.mockito.Mockito.mock;
 
@@ -14,18 +13,12 @@ public class TestRedisConfig {
 
     @Bean
     @Primary
-    public RedisConnectionFactory redisConnectionFactory() {
-        return mock(RedisConnectionFactory.class);
+    public RedisCacheService redisCacheService() {
+        return mock(RedisCacheService.class);
     }
 
     @Bean
-    @Primary
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
-        template.afterPropertiesSet();
-        return template;
+    public RedisTemplate<String, Object> redisTemplate() {
+        return mock(RedisTemplate.class);
     }
 }

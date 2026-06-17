@@ -2,6 +2,7 @@ package com.recitation.service;
 
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@Profile("!test")
 public class RedisCacheService {
 
     private static final String CATEGORY_KEY = "recitation:category";

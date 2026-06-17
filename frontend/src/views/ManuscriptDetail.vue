@@ -87,7 +87,7 @@
                 {{ manuscriptType === 'poetry' ? '古诗词' : '散文' }}
               </el-tag>
               <DifficultyBadge v-if="manuscript.difficulty" :difficulty="manuscript.difficulty" />
-              <span v-if="manuscript.author" class="meta-item">作者：{{ manuscript.author }}</span>
+              <span v-if="manuscript.author" class="meta-item author-link" @click="goAuthorProfile(manuscript.author)">作者：{{ manuscript.author }}</span>
               <span class="meta-item">浏览：{{ manuscript.viewCount }}</span>
               <span class="meta-item">收藏：{{ manuscript.favoriteCount }}</span>
             </div>
@@ -453,7 +453,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
@@ -462,6 +462,7 @@ import { splitContentSections, getParagraphSections, getParagraphIndex as calcPa
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const route = useRoute()
+const router = useRouter()
 const manuscript = ref(null)
 const loading = ref(false)
 const isFavorited = ref(false)
@@ -933,6 +934,10 @@ const saveNote = async () => {
   }
 }
 
+const goAuthorProfile = (author) => {
+  router.push(`/author/${encodeURIComponent(author)}`)
+}
+
 onMounted(() => {
   loadDetail()
 })
@@ -980,6 +985,17 @@ onMounted(() => {
 .meta-item {
   font-size: 14px;
   color: #909399;
+}
+
+.author-link {
+  color: #409eff;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.author-link:hover {
+  color: #66b1ff;
+  text-decoration: underline;
 }
 
 .introduction {

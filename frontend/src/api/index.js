@@ -49,3 +49,5 @@ export const getEmotionBands = (userId, manuscriptId) => request.get('/emotion-b
 export const getEmotionBandList = (userId, manuscriptId) => request.get('/emotion-bands/list', { params: { userId, manuscriptId } })
 
 export const deleteEmotionBand = (userId, manuscriptId, paragraphIndex) => request.delete('/emotion-bands', { params: { userId, manuscriptId, paragraphIndex } })
+
+export const getAuthorProfile = (name) => request.get(`/authors/${encodeURIComponent(name)}/profile`)

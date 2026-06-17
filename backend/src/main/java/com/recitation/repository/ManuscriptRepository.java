@@ -21,6 +21,8 @@ public interface ManuscriptRepository extends JpaRepository<Manuscript, Long> {
 
     List<Manuscript> findTop10ByIsPublicTrueAndStatusOrderByFavoriteCountDesc(Integer status);
 
+    List<Manuscript> findByAuthorAndIsPublicTrueAndStatus(String author, Boolean isPublic, Integer status);
+
     @Modifying
     @Query("UPDATE Manuscript m SET m.viewCount = m.viewCount + 1 WHERE m.id = :id")
     int incrementViewCount(Long id);

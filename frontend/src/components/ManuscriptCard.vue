@@ -9,7 +9,7 @@
       <p v-if="manuscript.introduction" class="intro text-ellipsis-2">{{ manuscript.introduction }}</p>
       <p v-else class="intro text-ellipsis-3">{{ manuscript.content }}</p>
       <div class="card-footer">
-        <span class="author" v-if="manuscript.author">
+        <span class="author" v-if="manuscript.author" @click.stop="goAuthorProfile(manuscript.author)">
           <el-icon><User /></el-icon>
           {{ manuscript.author }}
         </span>
@@ -50,6 +50,10 @@ const tagType = computed(() => {
 
 const goDetail = () => {
   router.push(`/manuscript/${props.manuscript.id}`)
+}
+
+const goAuthorProfile = (author) => {
+  router.push(`/author/${encodeURIComponent(author)}`)
 }
 </script>
 
@@ -101,10 +105,17 @@ const goDetail = () => {
 
 .author {
   font-size: 13px;
-  color: #909399;
+  color: #409eff;
   display: flex;
   align-items: center;
   gap: 4px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.author:hover {
+  color: #66b1ff;
+  text-decoration: underline;
 }
 
 .stats {

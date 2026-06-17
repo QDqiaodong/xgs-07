@@ -14,5 +14,7 @@ public interface EmotionBandRepository extends JpaRepository<EmotionBand, Long> 
 
     Optional<EmotionBand> findByUserIdAndManuscriptIdAndParagraphIndex(Long userId, Long manuscriptId, Integer paragraphIndex);
 
+    List<EmotionBand> findByManuscriptIdIn(List<Long> manuscriptIds);
+
     void deleteByUserIdAndManuscriptIdAndParagraphIndex(Long userId, Long manuscriptId, Integer paragraphIndex);
 }

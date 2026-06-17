@@ -45,7 +45,7 @@ public class AuthorProfileController {
     @GetMapping("/{name}/profile")
     public Result<AuthorProfileDTO> getAuthorProfile(@PathVariable String name) {
         List<Manuscript> manuscripts = manuscriptRepository
-                .findByAuthorAndIsPublicTrueAndStatus(name, true, 1);
+                .findByAuthorAndIsPublicTrueAndStatus(name, 1);
 
         if (manuscripts.isEmpty()) {
             return Result.error("未找到该作者的文稿");

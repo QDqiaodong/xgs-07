@@ -40,6 +40,10 @@ export const getParagraphProgress = (userId, manuscriptId) => request.get('/para
 
 export const getParagraphProgressList = (userId, manuscriptId) => request.get('/paragraph-progress/list', { params: { userId, manuscriptId } })
 
+export const getTrainingProgress = (userId, manuscriptId) => request.get('/paragraph-progress/stats', { params: { userId, manuscriptId } })
+
+export const getUserTrainingProgressList = (userId) => request.get('/paragraph-progress/user-stats', { params: { userId } })
+
 export const deleteParagraphProgress = (userId, manuscriptId, paragraphIndex) => request.delete('/paragraph-progress', { params: { userId, manuscriptId, paragraphIndex } })
 
 export const saveEmotionBand = (data) => request.post('/emotion-bands', data)

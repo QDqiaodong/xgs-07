@@ -2,6 +2,7 @@ package com.recitation.controller;
 
 import com.recitation.common.Result;
 import com.recitation.dto.ParagraphProgressDTO;
+import com.recitation.dto.TrainingProgressDTO;
 import com.recitation.entity.ParagraphProgress;
 import com.recitation.service.ParagraphProgressService;
 import jakarta.validation.Valid;
@@ -35,6 +36,19 @@ public class ParagraphProgressController {
             @RequestParam Long userId,
             @RequestParam Long manuscriptId) {
         return Result.success(paragraphProgressService.getProgressList(userId, manuscriptId));
+    }
+
+    @GetMapping("/stats")
+    public Result<TrainingProgressDTO> getTrainingProgress(
+            @RequestParam Long userId,
+            @RequestParam Long manuscriptId) {
+        return Result.success(paragraphProgressService.getTrainingProgress(userId, manuscriptId));
+    }
+
+    @GetMapping("/user-stats")
+    public Result<List<TrainingProgressDTO>> getUserTrainingProgressList(
+            @RequestParam Long userId) {
+        return Result.success(paragraphProgressService.getUserTrainingProgressList(userId));
     }
 
     @DeleteMapping

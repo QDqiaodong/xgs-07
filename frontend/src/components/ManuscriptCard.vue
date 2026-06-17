@@ -8,6 +8,23 @@
       <h3 class="title text-ellipsis">{{ manuscript.title }}</h3>
       <p v-if="manuscript.introduction" class="intro text-ellipsis-2">{{ manuscript.introduction }}</p>
       <p v-else class="intro text-ellipsis-3">{{ manuscript.content }}</p>
+      
+      <div class="training-progress" v-if="progress">
+        <div class="progress-mini-bar">
+          <div class="progress-mini-fill" :style="{ width: progress.progressPercent + '%' }"></div>
+        </div>
+        <div class="progress-mini-info">
+          <span class="mini-stat">
+            <span class="mini-dot mastered-dot"></span>
+            {{ progress.masteredCount }}/{{ progress.totalParagraphs }}段
+          </span>
+          <span class="mini-stat practice-stat" v-if="progress.totalPracticeCount > 0">
+            <el-icon><Operation /></el-icon>
+            {{ progress.totalPracticeCount }}次
+          </span>
+        </div>
+      </div>
+      
       <div class="card-footer">
         <span class="author" v-if="manuscript.author" @click.stop="goAuthorProfile(manuscript.author)">
           <el-icon><User /></el-icon>
@@ -31,12 +48,17 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { Operation } from '@element-plus/icons-vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const props = defineProps({
   manuscript: {
     type: Object,
     required: true
+  },
+  progress: {
+    type: Object,
+    default: null
   }
 })
 
@@ -129,5 +151,57 @@ const goAuthorProfile = (author) => {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.training-progress {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f0f9eb 0%, #fdf6ec 100%);
+  border-radius: 6px;
+}
+
+.progress-mini-bar {
+  height: 5px;
+  background: #e4e7ed;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-mini-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.mini-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mastered-dot {
+  background: #67c23a;
+}
+
+.practice-stat {
+  color: #e6a23c;
+  font-weight: 500;
 }
 </style>

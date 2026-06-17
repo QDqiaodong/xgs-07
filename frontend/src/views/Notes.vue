@@ -26,7 +26,7 @@
           <div class="progress-summary" v-if="note.paragraphProgress">
             <div class="progress-title">
               <el-icon><TrendCharts /></el-icon>
-              段落掌握情况
+              训练进度统计
             </div>
             <div class="progress-stats-inline">
               <span class="stat-item mastered">
@@ -48,10 +48,20 @@
             <div class="progress-bar-small">
               <div class="progress-fill-mastered" :style="{ width: note.paragraphProgress.percent + '%' }"></div>
             </div>
+            <div class="extra-stats-row">
+              <span class="extra-stat-item">
+                <el-icon class="extra-stat-icon"><Operation /></el-icon>
+                练习次数：<strong>{{ note.paragraphProgress.totalPracticeCount || 0 }}</strong> 次
+              </span>
+              <span class="extra-stat-item">
+                <el-icon class="extra-stat-icon"><Clock /></el-icon>
+                最近练习：<strong>{{ formatRelativeTime(note.paragraphProgress.lastPracticeTime) }}</strong>
+              </span>
+            </div>
           </div>
           
           <div class="note-time">
-            更新于：{{ formatTime(note.updateTime) }}
+            更新于：{{ formatTime(note.updateTime || note.paragraphProgress?.lastPracticeTime) }}
           </div>
         </el-card>
         
@@ -154,10 +164,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled } from '@element-plus/icons-vue'
-import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getParagraphProgressList } from '@/api'
+import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation } from '@element-plus/icons-vue'
+import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
-import { getParagraphCount, detectManuscriptType } from '@/utils/manuscript'
 
 const router = useRouter()
 const loading = ref(false)
@@ -184,14 +193,36 @@ const formatTime = (time) => {
   return time.replace('T', ' ').substring(0, 16)
 }
 
+const formatRelativeTime = (time) => {
+  if (!time) return '暂无'
+  const now = new Date()
+  const target = new Date(time)
+  const diff = now - target
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 30) return `${days}天前`
+  return formatTime(time)
+}
+
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await getUserNotes({
-      userId,
-      page: page.value - 1,
-      size: size.value
-    })
+    const [res, progressList] = await Promise.all([
+      getUserNotes({
+        userId,
+        page: page.value - 1,
+        size: size.value
+      }),
+      getUserTrainingProgressList(userId).catch(e => {
+        console.error('加载训练进度失败', e)
+        return []
+      })
+    ])
     
     const noteMap = new Map()
     for (const note of res.content) {
@@ -201,6 +232,17 @@ const loadList = async () => {
     }
     const allNotes = Array.from(noteMap.values())
     
+    const progressMap = new Map()
+    for (const prog of progressList) {
+      progressMap.set(prog.manuscriptId, prog)
+    }
+    
+    for (const prog of progressList) {
+      if (!noteMap.has(prog.manuscriptId)) {
+        allNotes.push({ manuscriptId: prog.manuscriptId, virtualNote: true })
+      }
+    }
+    
     const validNotes = []
     for (let i = 0; i < allNotes.length; i++) {
       try {
@@ -209,36 +251,39 @@ const loadList = async () => {
           continue
         }
         allNotes[i].manuscriptTitle = manuscript?.title
-        const content = manuscript?.content || ''
-        const categoryName = manuscript?.categoryName || ''
-        const mType = detectManuscriptType(categoryName, content)
-        const total = getParagraphCount(content, mType)
+        const progress = progressMap.get(allNotes[i].manuscriptId)
         
-        try {
-          const progressList = await getParagraphProgressList(userId, allNotes[i].manuscriptId)
-          const stats = { mastered: 0, strengthen: 0, skip: 0, total }
-          if (progressList && progressList.length > 0) {
-            const paraStatusMap = new Map()
-            progressList.forEach(p => {
-              if (!paraStatusMap.has(p.paragraphIndex)) {
-                paraStatusMap.set(p.paragraphIndex, p.status)
-                if (p.status === 'mastered') stats.mastered++
-                else if (p.status === 'strengthen') stats.strengthen++
-                else if (p.status === 'skip') stats.skip++
-              }
-            })
+        if (progress) {
+          allNotes[i].paragraphProgress = {
+            mastered: progress.masteredCount || 0,
+            strengthen: progress.strengthenCount || 0,
+            skip: progress.skipCount || 0,
+            total: progress.totalParagraphs || 0,
+            percent: progress.progressPercent || 0,
+            totalPracticeCount: progress.totalPracticeCount || 0,
+            lastPracticeTime: progress.lastPracticeTime
           }
-          stats.percent = total > 0 ? Math.round((stats.mastered / total) * 100) : 0
-          allNotes[i].paragraphProgress = stats
-        } catch (e) {
-          console.error('加载段落进度失败', e)
-          allNotes[i].paragraphProgress = { mastered: 0, strengthen: 0, skip: 0, total, percent: 0 }
+        } else {
+          allNotes[i].paragraphProgress = {
+            mastered: 0, strengthen: 0, skip: 0, total: 0, percent: 0,
+            totalPracticeCount: 0, lastPracticeTime: null
+          }
         }
+        
         validNotes.push(allNotes[i])
       } catch (e) {
         console.error(e)
       }
     }
+    
+    validNotes.sort((a, b) => {
+      const timeA = a.paragraphProgress?.lastPracticeTime || a.updateTime
+      const timeB = b.paragraphProgress?.lastPracticeTime || b.updateTime
+      if (!timeA && !timeB) return 0
+      if (!timeA) return 1
+      if (!timeB) return -1
+      return new Date(timeB) - new Date(timeA)
+    })
     
     list.value = validNotes
     total.value = validNotes.length
@@ -428,6 +473,33 @@ onMounted(() => {
   background: linear-gradient(90deg, #67c23a 0%, #85ce61 100%);
   border-radius: 3px;
   transition: width 0.3s ease;
+}
+
+.extra-stats-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(103, 194, 58, 0.3);
+  flex-wrap: wrap;
+}
+
+.extra-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.extra-stat-icon {
+  font-size: 16px;
+  color: #e6a23c;
+}
+
+.extra-stat-item strong {
+  color: #303133;
+  font-weight: 600;
 }
 
 .note-time {

@@ -32,6 +32,9 @@ public class ParagraphProgress {
     @Column(length = 20)
     private String status;
 
+    @Column(nullable = false)
+    private Integer practiceCount = 0;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createTime;

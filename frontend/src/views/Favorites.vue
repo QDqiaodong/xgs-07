@@ -7,7 +7,7 @@
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="item in manuscriptList" :key="item.id">
           <div class="favorite-item">
-            <ManuscriptCard :manuscript="item" />
+            <ManuscriptCard :manuscript="item" :progress="getProgress(item.manuscriptId || item.id)" />
             <el-button 
               type="danger" 
               size="small" 
@@ -39,7 +39,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getFavorites, removeFavorite as apiRemoveFavorite, getManuscriptById } from '@/api'
+import { getFavorites, removeFavorite as apiRemoveFavorite, getManuscriptById, getUserTrainingProgressList } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
 import ManuscriptCard from '@/components/ManuscriptCard.vue'
 
@@ -48,6 +48,7 @@ const list = ref([])
 const page = ref(1)
 const size = ref(12)
 const total = ref(0)
+const progressMap = ref(new Map())
 
 const userId = getCurrentUserId()
 
@@ -58,14 +59,34 @@ const manuscriptList = computed(() => {
   })).filter(item => item.id)
 })
 
+const getProgress = (manuscriptId) => {
+  return progressMap.value.get(manuscriptId) || null
+}
+
+const loadProgress = async () => {
+  try {
+    const progressList = await getUserTrainingProgressList(userId)
+    const map = new Map()
+    for (const prog of progressList) {
+      map.set(prog.manuscriptId, prog)
+    }
+    progressMap.value = map
+  } catch (e) {
+    console.error('加载训练进度失败', e)
+  }
+}
+
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await getFavorites({
-      userId,
-      page: page.value - 1,
-      size: size.value
-    })
+    const [res, _] = await Promise.all([
+      getFavorites({
+        userId,
+        page: page.value - 1,
+        size: size.value
+      }),
+      loadProgress()
+    ])
     list.value = res.content
     total.value = res.totalElements
     

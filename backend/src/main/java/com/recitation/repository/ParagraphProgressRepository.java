@@ -20,14 +20,22 @@ public interface ParagraphProgressRepository extends JpaRepository<ParagraphProg
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query(value = "INSERT INTO paragraph_progress (user_id, manuscript_id, paragraph_index, status, create_time, update_time) " +
-            "VALUES (:userId, :manuscriptId, :paragraphIndex, :status, NOW(), NOW()) " +
-            "ON DUPLICATE KEY UPDATE status = VALUES(status), update_time = NOW()",
+    @Query(value = "INSERT INTO paragraph_progress (user_id, manuscript_id, paragraph_index, status, practice_count, create_time, update_time) " +
+            "VALUES (:userId, :manuscriptId, :paragraphIndex, :status, 1, NOW(), NOW()) " +
+            "ON DUPLICATE KEY UPDATE status = VALUES(status), practice_count = practice_count + 1, update_time = NOW()",
             nativeQuery = true)
     void upsertByUniqueKey(@Param("userId") Long userId,
                            @Param("manuscriptId") Long manuscriptId,
                            @Param("paragraphIndex") Integer paragraphIndex,
                            @Param("status") String status);
+
+    @Query("SELECT COALESCE(SUM(p.practiceCount), 0) FROM ParagraphProgress p WHERE p.userId = :userId AND p.manuscriptId = :manuscriptId")
+    Integer sumPracticeCountByUserAndManuscript(@Param("userId") Long userId, @Param("manuscriptId") Long manuscriptId);
+
+    @Query("SELECT MAX(p.updateTime) FROM ParagraphProgress p WHERE p.userId = :userId AND p.manuscriptId = :manuscriptId")
+    java.time.LocalDateTime findLastUpdateTimeByUserAndManuscript(@Param("userId") Long userId, @Param("manuscriptId") Long manuscriptId);
+
+    List<ParagraphProgress> findByUserId(Long userId);
 
     @Modifying
     @Transactional

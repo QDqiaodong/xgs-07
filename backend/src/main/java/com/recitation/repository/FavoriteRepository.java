@@ -21,4 +21,8 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     boolean existsByUserIdAndManuscriptId(Long userId, Long manuscriptId);
 
     void deleteByUserIdAndManuscriptId(Long userId, Long manuscriptId);
+
+    @Modifying
+    @Transactional
+    void deleteByManuscriptId(Long manuscriptId);
 }

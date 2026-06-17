@@ -32,4 +32,8 @@ public interface ParagraphProgressRepository extends JpaRepository<ParagraphProg
     @Modifying
     @Transactional
     void deleteByUserIdAndManuscriptIdAndParagraphIndex(Long userId, Long manuscriptId, Integer paragraphIndex);
+
+    @Modifying
+    @Transactional
+    void deleteByManuscriptId(Long manuscriptId);
 }

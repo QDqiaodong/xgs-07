@@ -72,7 +72,10 @@ public class PracticeNoteService {
         Map<Long, PracticeNote> uniqueMap = new LinkedHashMap<>();
         for (PracticeNote note : allNotes) {
             if (!uniqueMap.containsKey(note.getManuscriptId())) {
-                uniqueMap.put(note.getManuscriptId(), note);
+                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId());
+                if (manuscript != null && manuscript.getStatus() == 1) {
+                    uniqueMap.put(note.getManuscriptId(), note);
+                }
             }
         }
         

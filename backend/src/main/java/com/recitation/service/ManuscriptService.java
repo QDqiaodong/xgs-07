@@ -3,7 +3,10 @@ package com.recitation.service;
 import com.recitation.dto.ManuscriptDTO;
 import com.recitation.entity.Category;
 import com.recitation.entity.Manuscript;
+import com.recitation.repository.FavoriteRepository;
 import com.recitation.repository.ManuscriptRepository;
+import com.recitation.repository.ParagraphProgressRepository;
+import com.recitation.repository.PracticeNoteRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +27,15 @@ public class ManuscriptService {
 
     @Resource
     private RedisCacheService redisCacheService;
+
+    @Resource
+    private PracticeNoteRepository practiceNoteRepository;
+
+    @Resource
+    private ParagraphProgressRepository paragraphProgressRepository;
+
+    @Resource
+    private FavoriteRepository favoriteRepository;
 
     @Transactional
     public Manuscript createManuscript(ManuscriptDTO dto) {
@@ -120,6 +132,9 @@ public class ManuscriptService {
     @Transactional
     public boolean deleteManuscript(Long id) {
         if (manuscriptRepository.existsById(id)) {
+            practiceNoteRepository.deleteByManuscriptId(id);
+            paragraphProgressRepository.deleteByManuscriptId(id);
+            favoriteRepository.deleteByManuscriptId(id);
             manuscriptRepository.deleteById(id);
             redisCacheService.evictManuscriptCache(id);
             redisCacheService.evictHotManuscriptCache();

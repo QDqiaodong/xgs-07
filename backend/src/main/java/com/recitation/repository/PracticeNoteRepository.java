@@ -41,4 +41,8 @@ public interface PracticeNoteRepository extends JpaRepository<PracticeNote, Long
     @Modifying
     @Transactional
     void deleteByUserIdAndManuscriptId(Long userId, Long manuscriptId);
+
+    @Modifying
+    @Transactional
+    void deleteByManuscriptId(Long manuscriptId);
 }

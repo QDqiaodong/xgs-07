@@ -199,20 +199,23 @@ const loadList = async () => {
         noteMap.set(note.manuscriptId, note)
       }
     }
-    list.value = Array.from(noteMap.values())
-    total.value = list.value.length
+    const allNotes = Array.from(noteMap.values())
     
-    for (let i = 0; i < list.value.length; i++) {
+    const validNotes = []
+    for (let i = 0; i < allNotes.length; i++) {
       try {
-        const manuscript = await getManuscriptById(list.value[i].manuscriptId)
-        list.value[i].manuscriptTitle = manuscript?.title
+        const manuscript = await getManuscriptById(allNotes[i].manuscriptId)
+        if (!manuscript || manuscript.status !== 1) {
+          continue
+        }
+        allNotes[i].manuscriptTitle = manuscript?.title
         const content = manuscript?.content || ''
         const categoryName = manuscript?.categoryName || ''
         const mType = detectManuscriptType(categoryName, content)
         const total = getParagraphCount(content, mType)
         
         try {
-          const progressList = await getParagraphProgressList(userId, list.value[i].manuscriptId)
+          const progressList = await getParagraphProgressList(userId, allNotes[i].manuscriptId)
           const stats = { mastered: 0, strengthen: 0, skip: 0, total }
           if (progressList && progressList.length > 0) {
             const paraStatusMap = new Map()
@@ -226,15 +229,19 @@ const loadList = async () => {
             })
           }
           stats.percent = total > 0 ? Math.round((stats.mastered / total) * 100) : 0
-          list.value[i].paragraphProgress = stats
+          allNotes[i].paragraphProgress = stats
         } catch (e) {
           console.error('加载段落进度失败', e)
-          list.value[i].paragraphProgress = { mastered: 0, strengthen: 0, skip: 0, total, percent: 0 }
+          allNotes[i].paragraphProgress = { mastered: 0, strengthen: 0, skip: 0, total, percent: 0 }
         }
+        validNotes.push(allNotes[i])
       } catch (e) {
         console.error(e)
       }
     }
+    
+    list.value = validNotes
+    total.value = validNotes.length
   } catch (e) {
     console.error(e)
   } finally {

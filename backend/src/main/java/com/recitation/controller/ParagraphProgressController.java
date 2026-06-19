@@ -2,6 +2,7 @@ package com.recitation.controller;
 
 import com.recitation.common.Result;
 import com.recitation.dto.ParagraphProgressDTO;
+import com.recitation.dto.PracticeCalendarDTO;
 import com.recitation.dto.TrainingProgressDTO;
 import com.recitation.entity.ParagraphProgress;
 import com.recitation.service.ParagraphProgressService;
@@ -61,5 +62,13 @@ public class ParagraphProgressController {
             return Result.error("记录不存在");
         }
         return Result.success();
+    }
+
+    @GetMapping("/calendar")
+    public Result<List<PracticeCalendarDTO>> getPracticeCalendar(
+            @RequestParam Long userId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month) {
+        return Result.success(paragraphProgressService.getPracticeCalendar(userId, year, month));
     }
 }

@@ -57,3 +57,5 @@ export const getEmotionBandList = (userId, manuscriptId) => request.get('/emotio
 export const deleteEmotionBand = (userId, manuscriptId, paragraphIndex) => request.delete('/emotion-bands', { params: { userId, manuscriptId, paragraphIndex } })
 
 export const getAuthorProfile = (name) => request.get(`/authors/${encodeURIComponent(name)}/profile`)
+
+export const getPracticeCalendar = (userId, year, month) => request.get('/paragraph-progress/calendar', { params: { userId, year, month } })

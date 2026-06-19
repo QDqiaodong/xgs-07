@@ -2,6 +2,17 @@
   <div class="notes-page">
     <h2 class="page-title">我的练习笔记</h2>
 
+    <div class="calendar-section">
+      <div class="section-header-row">
+        <h3 class="section-title">
+          <el-icon class="title-icon calendar-icon"><Calendar /></el-icon>
+          练习日历
+        </h3>
+        <span class="section-subtitle">坚持训练，见证成长轨迹</span>
+      </div>
+      <PracticeCalendar ref="calendarRef" :userId="userId" @date-select="handleDateSelect" />
+    </div>
+
     <div class="review-section" v-if="emotionTrendData.length > 0">
       <div class="section-header-row">
         <h3 class="section-title">
@@ -307,9 +318,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation, Star } from '@element-plus/icons-vue'
+import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation, Star, Calendar } from '@element-plus/icons-vue'
 import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList, getEmotionScoreTrend } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
+import PracticeCalendar from '@/components/PracticeCalendar.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -334,6 +346,7 @@ const savingEdit = ref(false)
 const deletingId = ref(null)
 const emotionTrendData = ref([])
 const loadingTrend = ref(false)
+const calendarRef = ref(null)
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -555,6 +568,7 @@ const saveEdit = async () => {
     showEditDialog.value = false
     loadList()
     loadEmotionTrend()
+    refreshCalendar()
   } catch (e) {
     console.error(e)
   } finally {
@@ -575,12 +589,25 @@ const deleteNoteItem = async (id) => {
     ElMessage.success('删除成功')
     loadList()
     loadEmotionTrend()
+    refreshCalendar()
   } catch (e) {
     if (e !== 'cancel') {
       console.error(e)
     }
   } finally {
     deletingId.value = null
+  }
+}
+
+const handleDateSelect = (cell) => {
+  if (cell && cell.hasPractice && cell.practiceData && cell.practiceData.manuscripts) {
+    console.log('选中日期:', cell.date, '练习文稿:', cell.practiceData.manuscripts.length)
+  }
+}
+
+const refreshCalendar = () => {
+  if (calendarRef.value) {
+    calendarRef.value.loadCalendar()
   }
 }
 
@@ -1212,5 +1239,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 32px;
+}
+
+.calendar-section {
+  margin-bottom: 32px;
+}
+
+.calendar-icon {
+  color: #67c23a !important;
 }
 </style>

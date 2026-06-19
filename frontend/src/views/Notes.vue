@@ -428,7 +428,7 @@ const loadEmotionTrend = async () => {
     const result = []
     for (const note of trendList) {
       try {
-        const manuscript = await getManuscriptById(note.manuscriptId)
+        const manuscript = await getManuscriptById(note.manuscriptId, userId)
         if (manuscript && manuscript.status === 1) {
           result.push({
             ...note,
@@ -484,7 +484,7 @@ const loadList = async () => {
     const validNotes = []
     for (let i = 0; i < allNotes.length; i++) {
       try {
-        const manuscript = await getManuscriptById(allNotes[i].manuscriptId)
+        const manuscript = await getManuscriptById(allNotes[i].manuscriptId, userId)
         if (!manuscript || manuscript.status !== 1) {
           continue
         }

@@ -34,19 +34,19 @@ public class ManuscriptController {
     }
 
     @GetMapping("/{id}")
-    public Result<Manuscript> getById(@PathVariable Long id) {
-        Manuscript manuscript = manuscriptService.getManuscriptById(id);
+    public Result<Manuscript> getById(@PathVariable Long id, @RequestParam(required = false) String userId) {
+        Manuscript manuscript = manuscriptService.getManuscriptById(id, userId);
         if (manuscript == null) {
-            return Result.error("文稿不存在");
+            return Result.error("文稿不存在或无权限访问");
         }
         return Result.success(manuscript);
     }
 
     @GetMapping("/{id}/detail")
-    public Result<Manuscript> getDetail(@PathVariable Long id) {
-        Manuscript manuscript = manuscriptService.getManuscriptDetail(id);
+    public Result<Manuscript> getDetail(@PathVariable Long id, @RequestParam(required = false) String userId) {
+        Manuscript manuscript = manuscriptService.getManuscriptDetail(id, userId);
         if (manuscript == null) {
-            return Result.error("文稿不存在");
+            return Result.error("文稿不存在或无权限访问");
         }
         return Result.success(manuscript);
     }
@@ -65,10 +65,10 @@ public class ManuscriptController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        boolean deleted = manuscriptService.deleteManuscript(id);
+    public Result<Void> delete(@PathVariable Long id, @RequestParam(required = false) String userId) {
+        boolean deleted = manuscriptService.deleteManuscript(id, userId);
         if (!deleted) {
-            return Result.error("文稿不存在");
+            return Result.error("文稿不存在或无权限操作");
         }
         return Result.success();
     }

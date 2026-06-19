@@ -65,6 +65,11 @@ public class ManuscriptService {
         if (manuscript == null) {
             return null;
         }
+        String createUser = manuscript.getCreateUser();
+        String currentUserId = dto.getCreateUser();
+        if (createUser == null || !createUser.equals(currentUserId)) {
+            return null;
+        }
         manuscript.setTitle(dto.getTitle());
         manuscript.setContent(dto.getContent());
         manuscript.setIntroduction(dto.getIntroduction());
@@ -87,20 +92,45 @@ public class ManuscriptService {
     }
 
     public Manuscript getManuscriptById(Long id) {
+        return getManuscriptById(id, null);
+    }
+
+    public Manuscript getManuscriptById(Long id, String userId) {
         Object cached = redisCacheService.getCachedManuscript(id);
+        Manuscript manuscript;
         if (cached != null) {
-            return (Manuscript) cached;
+            manuscript = (Manuscript) cached;
+        } else {
+            manuscript = manuscriptRepository.findById(id).orElse(null);
+            if (manuscript != null) {
+                redisCacheService.cacheManuscript(id, manuscript);
+            }
         }
-        Manuscript manuscript = manuscriptRepository.findById(id).orElse(null);
-        if (manuscript != null) {
-            redisCacheService.cacheManuscript(id, manuscript);
+        if (manuscript != null && !manuscript.getIsPublic()) {
+            String createUser = manuscript.getCreateUser();
+            String currentUserId = userId != null ? "user_" + userId : null;
+            if (createUser == null || !createUser.equals(currentUserId)) {
+                return null;
+            }
         }
         return manuscript;
     }
 
     @Transactional
     public Manuscript getManuscriptDetail(Long id) {
+        return getManuscriptDetail(id, null);
+    }
+
+    @Transactional
+    public Manuscript getManuscriptDetail(Long id, String userId) {
         Manuscript manuscript = manuscriptRepository.findById(id).orElse(null);
+        if (manuscript != null && !manuscript.getIsPublic()) {
+            String createUser = manuscript.getCreateUser();
+            String currentUserId = userId != null ? "user_" + userId : null;
+            if (createUser == null || !createUser.equals(currentUserId)) {
+                return null;
+            }
+        }
         if (manuscript != null) {
             manuscriptRepository.incrementViewCount(id);
             manuscript.setViewCount(manuscript.getViewCount() + 1);
@@ -131,16 +161,27 @@ public class ManuscriptService {
 
     @Transactional
     public boolean deleteManuscript(Long id) {
-        if (manuscriptRepository.existsById(id)) {
-            practiceNoteRepository.deleteByManuscriptId(id);
-            paragraphProgressRepository.deleteByManuscriptId(id);
-            favoriteRepository.deleteByManuscriptId(id);
-            manuscriptRepository.deleteById(id);
-            redisCacheService.evictManuscriptCache(id);
-            redisCacheService.evictHotManuscriptCache();
-            return true;
+        return deleteManuscript(id, null);
+    }
+
+    @Transactional
+    public boolean deleteManuscript(Long id, String userId) {
+        Manuscript manuscript = manuscriptRepository.findById(id).orElse(null);
+        if (manuscript == null) {
+            return false;
         }
-        return false;
+        String createUser = manuscript.getCreateUser();
+        String currentUserId = userId != null ? "user_" + userId : null;
+        if (createUser == null || !createUser.equals(currentUserId)) {
+            return false;
+        }
+        practiceNoteRepository.deleteByManuscriptId(id);
+        paragraphProgressRepository.deleteByManuscriptId(id);
+        favoriteRepository.deleteByManuscriptId(id);
+        manuscriptRepository.deleteById(id);
+        redisCacheService.evictManuscriptCache(id);
+        redisCacheService.evictHotManuscriptCache();
+        return true;
     }
 
     @Transactional

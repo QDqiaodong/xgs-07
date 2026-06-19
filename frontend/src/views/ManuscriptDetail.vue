@@ -1,5 +1,13 @@
 <template>
   <div class="detail-page" v-loading="loading">
+    <div class="not-allowed-page" v-if="notAllowed">
+      <el-result icon="warning" title="无法访问" sub-title="该文稿不存在或为未公开文稿，您暂无权限查看">
+        <template #extra>
+          <el-button type="primary" @click="$router.back()">返回</el-button>
+          <el-button @click="$router.push('/manuscripts')">去文稿列表</el-button>
+        </template>
+      </el-result>
+    </div>
     <div class="detail-header" v-if="manuscript">
       <el-page-header @back="$router.back()" content="返回列表">
         <template #extra>
@@ -502,6 +510,7 @@ const route = useRoute()
 const router = useRouter()
 const manuscript = ref(null)
 const loading = ref(false)
+const notAllowed = ref(false)
 const isFavorited = ref(false)
 const notes = ref([])
 const showNoteDialog = ref(false)
@@ -903,9 +912,19 @@ const loadProgressData = async () => {
 
 const loadDetail = async () => {
   loading.value = true
+  notAllowed.value = false
   try {
     const id = route.params.id
-    manuscript.value = await getManuscriptDetail(id)
+    manuscript.value = await getManuscriptDetail(id, userId)
+    if (!manuscript.value) {
+      notAllowed.value = true
+      return
+    }
+    if (!manuscript.value.isPublic && manuscript.value.createUser !== 'user_' + userId) {
+      notAllowed.value = true
+      manuscript.value = null
+      return
+    }
     await Promise.all([
       checkFavoriteStatus(),
       loadNotes()
@@ -915,6 +934,7 @@ const loadDetail = async () => {
     loadEmotionData()
   } catch (e) {
     console.error(e)
+    notAllowed.value = true
   } finally {
     loading.value = false
   }
@@ -2141,5 +2161,12 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #606266;
+}
+
+.not-allowed-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
 }
 </style>

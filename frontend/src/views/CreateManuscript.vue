@@ -149,7 +149,7 @@ const loadCategories = async () => {
 const loadManuscript = async () => {
   if (!isEdit.value) return
   try {
-    const data = await getManuscriptById(route.params.id)
+    const data = await getManuscriptById(route.params.id, getCurrentUserId())
     form.value = {
       title: data.title,
       content: data.content,

@@ -93,7 +93,7 @@ const loadList = async () => {
     for (let i = 0; i < list.value.length; i++) {
       if (!list.value[i].manuscript) {
         try {
-          const manuscript = await getManuscriptById(list.value[i].manuscriptId)
+          const manuscript = await getManuscriptById(list.value[i].manuscriptId, userId)
           list.value[i].manuscript = manuscript
         } catch (e) {
           console.error(e)

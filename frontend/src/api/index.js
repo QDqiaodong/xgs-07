@@ -4,9 +4,9 @@ export const getCategories = () => request.get('/categories')
 
 export const getManuscripts = (params) => request.get('/manuscripts', { params })
 
-export const getManuscriptDetail = (id) => request.get(`/manuscripts/${id}/detail`)
+export const getManuscriptDetail = (id, userId) => request.get(`/manuscripts/${id}/detail`, { params: { userId } })
 
-export const getManuscriptById = (id) => request.get(`/manuscripts/${id}`)
+export const getManuscriptById = (id, userId) => request.get(`/manuscripts/${id}`, { params: { userId } })
 
 export const getHotManuscripts = () => request.get('/manuscripts/hot')
 
@@ -14,7 +14,7 @@ export const createManuscript = (data) => request.post('/manuscripts', data)
 
 export const updateManuscript = (id, data) => request.put(`/manuscripts/${id}`, data)
 
-export const deleteManuscript = (id) => request.delete(`/manuscripts/${id}`)
+export const deleteManuscript = (id, userId) => request.delete(`/manuscripts/${id}`, { params: { userId } })
 
 export const addFavorite = (userId, manuscriptId) => request.post('/favorites', null, { params: { userId, manuscriptId } })
 

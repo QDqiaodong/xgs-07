@@ -37,6 +37,9 @@ public class ManuscriptService {
     @Resource
     private FavoriteRepository favoriteRepository;
 
+    @Resource
+    private ManuscriptParagraphService manuscriptParagraphService;
+
     @Transactional
     public Manuscript createManuscript(ManuscriptDTO dto) {
         Manuscript manuscript = new Manuscript();
@@ -55,6 +58,7 @@ public class ManuscriptService {
         }
 
         Manuscript saved = manuscriptRepository.save(manuscript);
+        manuscriptParagraphService.syncParagraphs(saved.getId(), saved.getContent(), saved.getCategoryName());
         redisCacheService.evictHotManuscriptCache();
         return saved;
     }
@@ -86,6 +90,7 @@ public class ManuscriptService {
         }
 
         Manuscript saved = manuscriptRepository.save(manuscript);
+        manuscriptParagraphService.syncParagraphs(saved.getId(), saved.getContent(), saved.getCategoryName());
         redisCacheService.evictManuscriptCache(id);
         redisCacheService.evictHotManuscriptCache();
         return saved;
@@ -178,6 +183,7 @@ public class ManuscriptService {
         practiceNoteRepository.deleteByManuscriptId(id);
         paragraphProgressRepository.deleteByManuscriptId(id);
         favoriteRepository.deleteByManuscriptId(id);
+        manuscriptParagraphService.deleteByManuscript(id);
         manuscriptRepository.deleteById(id);
         redisCacheService.evictManuscriptCache(id);
         redisCacheService.evictHotManuscriptCache();

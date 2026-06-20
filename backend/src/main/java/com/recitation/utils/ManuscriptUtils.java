@@ -48,8 +48,13 @@ public class ManuscriptUtils {
     }
 
     public static int countParagraphs(String content, String categoryName) {
+        return splitParagraphContents(content, categoryName).size();
+    }
+
+    public static List<String> splitParagraphContents(String content, String categoryName) {
+        List<String> paragraphs = new ArrayList<>();
         if (content == null || content.trim().isEmpty()) {
-            return 0;
+            return paragraphs;
         }
 
         String manuscriptType = detectManuscriptType(categoryName, content);
@@ -61,31 +66,29 @@ public class ManuscriptUtils {
             }
         }
 
-        int paragraphCount = 0;
-
         if ("poetry".equals(manuscriptType)) {
-            int mergedLines = 0;
+            List<String> mergedLines = new ArrayList<>();
             for (String line : filteredLines) {
                 if (isHeading(line)) {
-                    if (mergedLines > 0) {
-                        paragraphCount++;
-                        mergedLines = 0;
+                    if (!mergedLines.isEmpty()) {
+                        paragraphs.add(String.join("\n", mergedLines));
+                        mergedLines = new ArrayList<>();
                     }
                 } else {
-                    mergedLines++;
+                    mergedLines.add(line);
                 }
             }
-            if (mergedLines > 0) {
-                paragraphCount++;
+            if (!mergedLines.isEmpty()) {
+                paragraphs.add(String.join("\n", mergedLines));
             }
         } else {
             for (String line : filteredLines) {
                 if (!isHeading(line)) {
-                    paragraphCount++;
+                    paragraphs.add(line);
                 }
             }
         }
 
-        return paragraphCount;
+        return paragraphs;
     }
 }

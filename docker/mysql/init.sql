@@ -81,6 +81,19 @@ CREATE TABLE IF NOT EXISTS emotion_band (
     INDEX idx_emotion_user_manuscript (user_id, manuscript_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS manuscript_paragraph (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    manuscript_id BIGINT NOT NULL,
+    paragraph_index INT NOT NULL,
+    content TEXT NOT NULL,
+    reading_tip TEXT,
+    practice_focus TEXT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_manuscript_paragraph (manuscript_id, paragraph_index),
+    INDEX idx_manuscript (manuscript_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO category (name, description, sort_order) VALUES
 ('现代文', '现代散文、小说选段等现代文学作品', 1),
 ('古诗词', '唐诗、宋词、元曲等古典诗词', 2),

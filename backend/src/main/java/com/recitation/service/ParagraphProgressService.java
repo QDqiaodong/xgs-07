@@ -1,5 +1,6 @@
 package com.recitation.service;
 
+import com.recitation.common.BusinessException;
 import com.recitation.dto.ParagraphProgressDTO;
 import com.recitation.dto.PracticeCalendarDTO;
 import com.recitation.dto.TrainingProgressDTO;
@@ -36,8 +37,23 @@ public class ParagraphProgressService {
     @Resource
     private ManuscriptService manuscriptService;
 
+    private void validateManuscriptAccess(Long manuscriptId, Long userId) {
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        if (manuscript == null) {
+            throw new BusinessException("文稿不存在，无法保存段落进度");
+        }
+        if (manuscript.getStatus() != 1) {
+            throw new BusinessException("文稿状态异常，无法保存段落进度");
+        }
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
+        if (!ManuscriptUtils.canAccessManuscript(manuscript, userIdStr)) {
+            throw new BusinessException("无权限访问该文稿，无法保存段落进度");
+        }
+    }
+
     @Transactional
     public ParagraphProgress saveOrUpdate(ParagraphProgressDTO dto) {
+        validateManuscriptAccess(dto.getManuscriptId(), dto.getUserId());
         if (dto.getStatus() == null || dto.getStatus().isBlank()) {
             paragraphProgressRepository.deleteByUserIdAndManuscriptIdAndParagraphIndex(
                     dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex());

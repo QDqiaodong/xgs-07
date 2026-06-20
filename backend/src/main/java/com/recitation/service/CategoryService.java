@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CategoryService {
@@ -30,5 +31,20 @@ public class CategoryService {
 
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id).orElse(null);
+    }
+
+    public Category getActiveCategoryById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        Optional<Category> opt = categoryRepository.findByIdAndStatusTrue(id);
+        return opt.orElse(null);
+    }
+
+    public boolean isCategoryValid(Long id) {
+        if (id == null) {
+            return false;
+        }
+        return categoryRepository.findByIdAndStatusTrue(id).isPresent();
     }
 }

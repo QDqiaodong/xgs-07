@@ -1,8 +1,11 @@
 package com.recitation.service;
 
+import com.recitation.common.BusinessException;
 import com.recitation.dto.EmotionBandDTO;
 import com.recitation.entity.EmotionBand;
+import com.recitation.entity.Manuscript;
 import com.recitation.repository.EmotionBandRepository;
+import com.recitation.utils.ManuscriptUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,8 +24,26 @@ public class EmotionBandService {
     @Resource
     private EmotionBandRepository emotionBandRepository;
 
+    @Resource
+    private ManuscriptService manuscriptService;
+
+    private void validateManuscriptAccess(Long manuscriptId, Long userId) {
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        if (manuscript == null) {
+            throw new BusinessException("文稿不存在，无法保存情感色带");
+        }
+        if (manuscript.getStatus() != 1) {
+            throw new BusinessException("文稿状态异常，无法保存情感色带");
+        }
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
+        if (!ManuscriptUtils.canAccessManuscript(manuscript, userIdStr)) {
+            throw new BusinessException("无权限访问该文稿，无法保存情感色带");
+        }
+    }
+
     @Transactional
     public EmotionBand saveOrUpdate(EmotionBandDTO dto) {
+        validateManuscriptAccess(dto.getManuscriptId(), dto.getUserId());
         Optional<EmotionBand> existing = emotionBandRepository
                 .findByUserIdAndManuscriptIdAndParagraphIndex(dto.getUserId(), dto.getManuscriptId(), dto.getParagraphIndex());
         if (dto.getEmotionType() == null || dto.getEmotionType().isBlank()) {

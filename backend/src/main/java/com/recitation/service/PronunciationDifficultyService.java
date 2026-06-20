@@ -1,8 +1,11 @@
 package com.recitation.service;
 
+import com.recitation.common.BusinessException;
 import com.recitation.dto.PronunciationDifficultyDTO;
+import com.recitation.entity.Manuscript;
 import com.recitation.entity.PronunciationDifficulty;
 import com.recitation.repository.PronunciationDifficultyRepository;
+import com.recitation.utils.ManuscriptUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,8 +20,26 @@ public class PronunciationDifficultyService {
     @Resource
     private PronunciationDifficultyRepository pronunciationDifficultyRepository;
 
+    @Resource
+    private ManuscriptService manuscriptService;
+
+    private void validateManuscriptAccess(Long manuscriptId, Long userId) {
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        if (manuscript == null) {
+            throw new BusinessException("文稿不存在，无法保存发音难点");
+        }
+        if (manuscript.getStatus() != 1) {
+            throw new BusinessException("文稿状态异常，无法保存发音难点");
+        }
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
+        if (!ManuscriptUtils.canAccessManuscript(manuscript, userIdStr)) {
+            throw new BusinessException("无权限访问该文稿，无法保存发音难点");
+        }
+    }
+
     @Transactional
     public PronunciationDifficulty saveOrUpdate(PronunciationDifficultyDTO dto) {
+        validateManuscriptAccess(dto.getManuscriptId(), dto.getUserId());
         Boolean isPublic = dto.getIsPublic() != null ? dto.getIsPublic() : false;
         pronunciationDifficultyRepository.upsertByUniqueKey(
                 dto.getManuscriptId(),

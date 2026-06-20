@@ -699,7 +699,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession } from '@/api'
-import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript } from '@/utils/storage'
+import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
@@ -938,20 +938,22 @@ const toggleDifficultyPanel = () => {
 
 const loadDifficultyAnalysis = () => {
   if (!manuscript.value?.content) return
-  const savedData = getDifficulty(userId, route.params.id)
+  const content = manuscript.value.content
+  const currentHash = getContentHash(content)
+  const savedData = getDifficulty(userId, route.params.id, currentHash)
   if (savedData) {
     difficultyAnalysis.value = savedData.analysis || {}
     difficultyStats.value = savedData.stats || { long: 0, tongue: 0, breath: 0, misread: 0 }
     return
   }
-  const result = analyzeDifficultContent(manuscript.value.content, manuscriptType.value)
+  const result = analyzeDifficultContent(content, manuscriptType.value)
   const analysisMap = {}
   result.paragraphs.forEach((p, idx) => {
     analysisMap[idx] = p
   })
   difficultyAnalysis.value = analysisMap
   difficultyStats.value = result.stats
-  saveDifficulty(userId, route.params.id, { analysis: analysisMap, stats: result.stats })
+  saveDifficulty(userId, route.params.id, { analysis: analysisMap, stats: result.stats }, currentHash)
 }
 
 const getAnnotatedContent = (paraIndex) => {
@@ -1506,6 +1508,12 @@ const savePracticeSession = async () => {
 onMounted(() => {
   loadDetail()
   window.addEventListener('scroll', onScroll, { passive: true })
+})
+
+watch(() => manuscript.value?.content, (newContent, oldContent) => {
+  if (newContent !== undefined && newContent !== oldContent && difficultyPanelVisible.value) {
+    loadDifficultyAnalysis()
+  }
 })
 
 onUnmounted(() => {

@@ -4,6 +4,20 @@ const PROGRESS_KEY = 'recitation_progress_'
 const EMOTION_KEY = 'recitation_emotion_'
 const DIFFICULTY_KEY = 'recitation_difficulty_'
 
+const hashContent = (content) => {
+  if (!content) return ''
+  let hash = 0
+  const str = String(content)
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return String(hash)
+}
+
+export const getContentHash = hashContent
+
 export const saveDraft = (key, data) => {
   try {
     localStorage.setItem(DRAFT_KEY + key, JSON.stringify({
@@ -153,10 +167,11 @@ export const canAccessManuscript = (manuscript, userId) => {
   return createUser && formattedUserId && createUser === formattedUserId
 }
 
-export const saveDifficulty = (userId, manuscriptId, difficultyData) => {
+export const saveDifficulty = (userId, manuscriptId, difficultyData, contentHash) => {
   try {
     localStorage.setItem(DIFFICULTY_KEY + userId + '_' + manuscriptId, JSON.stringify({
       data: difficultyData,
+      contentHash: contentHash || '',
       timestamp: Date.now()
     }))
   } catch (e) {
@@ -164,11 +179,16 @@ export const saveDifficulty = (userId, manuscriptId, difficultyData) => {
   }
 }
 
-export const getDifficulty = (userId, manuscriptId) => {
+export const getDifficulty = (userId, manuscriptId, contentHash) => {
   try {
     const item = localStorage.getItem(DIFFICULTY_KEY + userId + '_' + manuscriptId)
     if (item) {
       const parsed = JSON.parse(item)
+      if (contentHash !== undefined && contentHash !== null) {
+        if (parsed.contentHash !== contentHash) {
+          return null
+        }
+      }
       return parsed.data
     }
   } catch (e) {

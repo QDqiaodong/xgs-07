@@ -1,5 +1,6 @@
 package com.recitation.service;
 
+import com.recitation.common.BusinessException;
 import com.recitation.dto.ManuscriptDTO;
 import com.recitation.entity.Category;
 import com.recitation.entity.Manuscript;
@@ -43,6 +44,10 @@ public class ManuscriptService {
 
     @Transactional
     public Manuscript createManuscript(ManuscriptDTO dto) {
+        if (!categoryService.isCategoryValid(dto.getCategoryId())) {
+            throw new BusinessException("分类不存在或已停用，请选择有效分类");
+        }
+
         Manuscript manuscript = new Manuscript();
         manuscript.setTitle(dto.getTitle());
         manuscript.setContent(dto.getContent());
@@ -53,7 +58,7 @@ public class ManuscriptService {
         manuscript.setIsPublic(dto.getIsPublic() != null ? dto.getIsPublic() : false);
         manuscript.setCreateUser(dto.getCreateUser());
 
-        Category category = categoryService.getCategoryById(dto.getCategoryId());
+        Category category = categoryService.getActiveCategoryById(dto.getCategoryId());
         if (category != null) {
             manuscript.setCategoryName(category.getName());
         }
@@ -73,6 +78,11 @@ public class ManuscriptService {
         if (!ManuscriptUtils.canModifyManuscript(manuscript, dto.getCreateUser())) {
             return null;
         }
+
+        if (!categoryService.isCategoryValid(dto.getCategoryId())) {
+            throw new BusinessException("分类不存在或已停用，请选择有效分类");
+        }
+
         manuscript.setTitle(dto.getTitle());
         manuscript.setContent(dto.getContent());
         manuscript.setIntroduction(dto.getIntroduction());
@@ -83,7 +93,7 @@ public class ManuscriptService {
             manuscript.setIsPublic(dto.getIsPublic());
         }
 
-        Category category = categoryService.getCategoryById(dto.getCategoryId());
+        Category category = categoryService.getActiveCategoryById(dto.getCategoryId());
         if (category != null) {
             manuscript.setCategoryName(category.getName());
         }

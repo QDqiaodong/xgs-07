@@ -65,3 +65,31 @@ export const deleteEmotionBand = (userId, manuscriptId, paragraphIndex) => reque
 export const getAuthorProfile = (name) => request.get(`/authors/${encodeURIComponent(name)}/profile`)
 
 export const getPracticeCalendar = (userId, year, month) => request.get('/paragraph-progress/calendar', { params: { userId, year, month } })
+
+export const savePronunciationDifficulty = (data) => request.post('/pronunciation-difficulty', data)
+
+export const getPronunciationDifficultyMap = (manuscriptId, userId) => request.get('/pronunciation-difficulty', { params: { manuscriptId, userId } })
+
+export const getPronunciationDifficultyList = (manuscriptId, userId) => request.get('/pronunciation-difficulty/list', { params: { manuscriptId, userId } })
+
+export const getPronunciationDifficultyByParagraph = (manuscriptId, paragraphIndex, userId) => request.get('/pronunciation-difficulty/paragraph', { params: { manuscriptId, paragraphIndex, userId } })
+
+export const deletePronunciationDifficulty = (manuscriptId, paragraphIndex, userId) => request.delete('/pronunciation-difficulty', { params: { manuscriptId, paragraphIndex, userId } })
+
+export const startPracticeSession = (data) => request.post('/practice-sessions/start', data)
+
+export const endPracticeSession = (id, data) => request.post(`/practice-sessions/${id}/end`, data)
+
+export const savePracticeSession = (data) => request.post('/practice-sessions', data)
+
+export const getPracticeSessions = (userId, manuscriptId) => request.get('/practice-sessions', { params: { userId, manuscriptId } })
+
+export const getPracticeSessionsByDate = (userId, date) => request.get('/practice-sessions/date', { params: { userId, date } })
+
+export const getPracticeSessionsByRange = (userId, startDate, endDate) => request.get('/practice-sessions/range', { params: { userId, startDate, endDate } })
+
+export const getLatestPracticeSession = (userId, manuscriptId) => request.get('/practice-sessions/latest', { params: { userId, manuscriptId } })
+
+export const getPracticeSessionStats = (userId, manuscriptId) => request.get('/practice-sessions/stats', { params: { userId, manuscriptId } })
+
+export const deletePracticeSession = (id, userId) => request.delete(`/practice-sessions/${id}`, { params: { userId } })

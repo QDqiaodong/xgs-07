@@ -31,6 +31,15 @@
             <el-icon><EditPen /></el-icon>
             记录笔记
           </el-button>
+          <el-button v-if="!practiceSessionActive" type="success" @click="startPractice" :loading="savingPractice">
+            <el-icon><VideoPlay /></el-icon>
+            开始练习
+          </el-button>
+          <el-button v-else type="danger" @click="endPractice" :loading="savingPractice">
+            <el-icon><Close /></el-icon>
+            结束练习
+            <span class="timer-display">{{ formatElapsedTime(elapsedSeconds) }}</span>
+          </el-button>
         </template>
       </el-page-header>
     </div>
@@ -119,6 +128,34 @@
                 <span class="progress-item total">
                   共 {{ paragraphSections.length }} 段
                 </span>
+              </div>
+            </div>
+            <div class="practice-stats" v-if="practiceStats && practiceStats.sessionCount > 0">
+              <div class="practice-stats-title">
+                <el-icon><Timer /></el-icon>
+                <span>练习统计</span>
+              </div>
+              <div class="practice-stats-row">
+                <div class="practice-stat-item">
+                  <span class="practice-stat-label">累计练习</span>
+                  <span class="practice-stat-value">{{ practiceStats.sessionCount || 0 }} 次</span>
+                </div>
+                <div class="practice-stat-item">
+                  <span class="practice-stat-label">累计时长</span>
+                  <span class="practice-stat-value">{{ formatDuration(practiceStats.totalDurationSeconds || 0) }}</span>
+                </div>
+                <div class="practice-stat-item">
+                  <span class="practice-stat-label">平均时长</span>
+                  <span class="practice-stat-value">{{ formatDuration(practiceStats.sessionCount > 0 ? Math.round(practiceStats.totalDurationSeconds / practiceStats.sessionCount) : 0) }}</span>
+                </div>
+                <div class="practice-stat-item" v-if="practiceStats.averageScore > 0">
+                  <span class="practice-stat-label">平均评分</span>
+                  <span class="practice-stat-value">{{ Number(practiceStats.averageScore).toFixed(1) }} 分</span>
+                </div>
+                <div class="practice-stat-item" v-if="practiceStats.lastPracticeTime">
+                  <span class="practice-stat-label">最近练习</span>
+                  <span class="practice-stat-value">{{ formatRelativeTime(practiceStats.lastPracticeTime) }}</span>
+                </div>
               </div>
             </div>
             <div class="emotion-legend" v-if="emotionPanelVisible">
@@ -335,9 +372,33 @@
             <div class="difficulty-group" v-if="analysis && analysis.hasAny">
               <div class="difficulty-group-header" @click="scrollToParagraph(pIndex)">
                 <span class="diff-group-num">第 {{ pIndex + 1 }} 段</span>
-                <el-icon class="diff-group-arrow"><ArrowRight /></el-icon>
+                <div class="diff-group-actions">
+                  <el-button type="text" size="small" @click.stop="openPronunciationEditor(pIndex)">
+                    <el-icon><Edit /></el-icon>
+                    发音归档
+                  </el-button>
+                  <el-icon class="diff-group-arrow"><ArrowRight /></el-icon>
+                </div>
               </div>
               <div class="difficulty-group-items">
+                <div v-if="pronunciationDifficultyMap[pIndex]" class="pronunciation-summary">
+                  <div v-if="pronunciationDifficultyMap[pIndex].polyphonicWords" class="pronunciation-item polyphonic">
+                    <span class="pronunciation-badge">多音字</span>
+                    <span class="pronunciation-text">{{ pronunciationDifficultyMap[pIndex].polyphonicWords }}</span>
+                  </div>
+                  <div v-if="pronunciationDifficultyMap[pIndex].linking" class="pronunciation-item linking">
+                    <span class="pronunciation-badge">连读</span>
+                    <span class="pronunciation-text">{{ pronunciationDifficultyMap[pIndex].linking }}</span>
+                  </div>
+                  <div v-if="pronunciationDifficultyMap[pIndex].stress" class="pronunciation-item stress">
+                    <span class="pronunciation-badge">轻重音</span>
+                    <span class="pronunciation-text">{{ pronunciationDifficultyMap[pIndex].stress }}</span>
+                  </div>
+                  <div v-if="pronunciationDifficultyMap[pIndex].breathPoints" class="pronunciation-item breath">
+                    <span class="pronunciation-badge">换气点</span>
+                    <span class="pronunciation-text">{{ pronunciationDifficultyMap[pIndex].breathPoints }}</span>
+                  </div>
+                </div>
                 <div v-for="(s, sIdx) in analysis.longSentences" :key="'long-' + sIdx" class="diff-item diff-item-long">
                   <span class="diff-item-badge">长句</span>
                   <span class="diff-item-text">{{ s.text.length > 50 ? s.text.slice(0, 50) + '...' : s.text }}</span>
@@ -493,6 +554,125 @@
         <el-button type="primary" :loading="savingEmotion" @click="saveEmotionData">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showPronunciationEditor" title="发音难点归档" width="600px">
+      <el-form :model="pronunciationForm" label-width="100px">
+        <div class="pronunciation-section-header">
+          <span class="pronunciation-section-num">第 {{ editingPronunciationParagraphIndex + 1 }} 段</span>
+          <span class="pronunciation-section-tip">记录本段朗读中的发音难点，便于练习时参考</span>
+        </div>
+        <el-form-item label="多音字">
+          <el-input
+            v-model="pronunciationForm.polyphonicWords"
+            type="textarea"
+            :rows="2"
+            placeholder="如：'行'此处读xíng，不读háng；'重'此处读zhòng，不读chóng"
+          />
+        </el-form-item>
+        <el-form-item label="连读">
+          <el-input
+            v-model="pronunciationForm.linking"
+            type="textarea"
+            :rows="2"
+            placeholder="如：'是啊'读作shì ya；'对啊'读作duì ya"
+          />
+        </el-form-item>
+        <el-form-item label="轻重音">
+          <el-input
+            v-model="pronunciationForm.stress"
+            type="textarea"
+            :rows="2"
+            placeholder="如：'长江'重音在'长'；'母亲'重音在'母'"
+          />
+        </el-form-item>
+        <el-form-item label="换气点">
+          <el-input
+            v-model="pronunciationForm.breathPoints"
+            type="textarea"
+            :rows="2"
+            placeholder="如：第5个字后换气；逗号处停顿3秒；句号处换气"
+          />
+        </el-form-item>
+        <el-form-item label="共享">
+          <el-switch v-model="pronunciationForm.isPublic" active-text="设为公开（其他用户可见）" inactive-text="仅自己可见" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="clearPronunciation" type="danger" plain>清除归档</el-button>
+        <el-button @click="showPronunciationEditor = false">取消</el-button>
+        <el-button type="primary" :loading="savingPronunciation" @click="savePronunciationData">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="showPracticeEndDialog" title="本次练习小结" width="500px">
+      <el-form :model="practiceForm" label-width="100px">
+        <div class="practice-summary-card">
+          <div class="practice-summary-item">
+            <span class="practice-summary-label">练习时长</span>
+            <span class="practice-summary-value">{{ formatElapsedTime(elapsedSeconds) }}</span>
+          </div>
+        </div>
+        <el-form-item label="完成段落">
+          <el-select
+            v-model="practiceForm.completedParagraphs"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择本次完成的段落"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="(section, index) in paragraphSections"
+              :key="index"
+              :label="'第 ' + (index + 1) + ' 段'"
+              :value="String(index)"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="自评状态">
+          <div class="self-assessment-picker">
+            <div
+              class="self-assessment-option"
+              v-for="opt in selfAssessmentOptions"
+              :key="opt.value"
+              :class="{ active: practiceForm.selfAssessmentStatus === opt.value }"
+              :style="{ '--assess-color': opt.color }"
+              @click="selectSelfAssessment(opt.value)"
+            >
+              <span class="assess-dot" :style="{ background: opt.color }"></span>
+              <span class="assess-label">{{ opt.label }}</span>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="自评分数">
+          <div class="practice-score-input">
+            <el-rate
+              v-model="practiceForm.selfAssessmentScore"
+              :max="10"
+              :low-threshold="3"
+              :high-threshold="7"
+              :colors="['#f56c6c', '#e6a23c', '#67c23a']"
+              :texts="['很差', '较差', '一般', '较好', '很好']"
+              show-text
+              allow-half
+            />
+            <span class="practice-score-num" v-if="practiceForm.selfAssessmentScore">{{ practiceForm.selfAssessmentScore }} 分</span>
+          </div>
+        </el-form-item>
+        <el-form-item label="练习心得">
+          <el-input
+            v-model="practiceForm.selfAssessmentNote"
+            type="textarea"
+            :rows="3"
+            placeholder="记录本次练习的心得、收获、待改进的地方..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showPracticeEndDialog = false">取消</el-button>
+        <el-button type="primary" :loading="savingPractice" @click="savePracticeSession">保存记录</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -500,8 +680,8 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand } from '@/api'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera } from '@element-plus/icons-vue'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
@@ -556,6 +736,40 @@ const emotionForm = ref({
 const difficultyPanelVisible = ref(false)
 const difficultyAnalysis = ref({})
 const difficultyStats = ref({ long: 0, tongue: 0, breath: 0, misread: 0 })
+
+const pronunciationDifficultyMap = ref({})
+const showPronunciationEditor = ref(false)
+const editingPronunciationParagraphIndex = ref(-1)
+const pronunciationForm = ref({
+  polyphonicWords: '',
+  linking: '',
+  stress: '',
+  breathPoints: '',
+  isPublic: false
+})
+const savingPronunciation = ref(false)
+
+const practiceStats = ref(null)
+const practiceSessionActive = ref(false)
+const currentSessionId = ref(null)
+const sessionStartTime = ref(null)
+const sessionTimer = ref(null)
+const elapsedSeconds = ref(0)
+const showPracticeEndDialog = ref(false)
+const practiceForm = ref({
+  completedParagraphs: '',
+  selfAssessmentStatus: '',
+  selfAssessmentScore: null,
+  selfAssessmentNote: ''
+})
+const savingPractice = ref(false)
+
+const selfAssessmentOptions = [
+  { value: 'excellent', label: '优秀', color: '#67c23a' },
+  { value: 'good', label: '良好', color: '#409eff' },
+  { value: 'fair', label: '一般', color: '#e6a23c' },
+  { value: 'needs_work', label: '需改进', color: '#f56c6c' }
+]
 
 const emotionOptions = [
   { value: 'calm', label: '平缓', color: '#909399' },
@@ -932,6 +1146,8 @@ const loadDetail = async () => {
     loadRhythmData()
     loadProgressData()
     loadEmotionData()
+    loadPronunciationDifficulty()
+    loadPracticeStats()
   } catch (e) {
     console.error(e)
     notAllowed.value = true
@@ -1021,6 +1237,209 @@ const getScoreClass = (score) => {
   if (score >= 8) return 'score-high'
   if (score >= 5) return 'score-medium'
   return 'score-low'
+}
+
+const loadPronunciationDifficulty = async () => {
+  try {
+    const data = await getPronunciationDifficultyMap(route.params.id, userId)
+    if (data) {
+      pronunciationDifficultyMap.value = data
+    }
+  } catch (e) {
+    console.error('加载发音难点归档失败', e)
+  }
+}
+
+const openPronunciationEditor = async (paraIndex) => {
+  editingPronunciationParagraphIndex.value = paraIndex
+  pronunciationForm.value = {
+    polyphonicWords: '',
+    linking: '',
+    stress: '',
+    breathPoints: '',
+    isPublic: false
+  }
+  try {
+    const existing = await getPronunciationDifficultyByParagraph(route.params.id, paraIndex, userId)
+    if (existing) {
+      pronunciationForm.value = {
+        polyphonicWords: existing.polyphonicWords || '',
+        linking: existing.linking || '',
+        stress: existing.stress || '',
+        breathPoints: existing.breathPoints || '',
+        isPublic: existing.isPublic || false
+      }
+    }
+  } catch (e) {
+    console.error('加载段落发音难点失败', e)
+  }
+  showPronunciationEditor.value = true
+}
+
+const savePronunciationData = async () => {
+  if (savingPronunciation.value) return
+  savingPronunciation.value = true
+  try {
+    const hasData = pronunciationForm.value.polyphonicWords || pronunciationForm.value.linking ||
+                   pronunciationForm.value.stress || pronunciationForm.value.breathPoints
+    if (hasData) {
+      const saved = await savePronunciationDifficulty({
+        manuscriptId: route.params.id,
+        paragraphIndex: editingPronunciationParagraphIndex.value,
+        userId,
+        ...pronunciationForm.value
+      })
+      if (saved) {
+        pronunciationDifficultyMap.value[editingPronunciationParagraphIndex.value] = saved
+      }
+    } else {
+      const existing = pronunciationDifficultyMap.value[editingPronunciationParagraphIndex.value]
+      if (existing && existing.id) {
+        try {
+          await deletePronunciationDifficulty(route.params.id, editingPronunciationParagraphIndex.value, userId)
+          delete pronunciationDifficultyMap.value[editingPronunciationParagraphIndex.value]
+        } catch (e) {
+          console.error('删除发音难点归档失败', e)
+        }
+      }
+    }
+    ElMessage.success('发音难点归档已保存')
+    showPronunciationEditor.value = false
+  } catch (e) {
+    console.error('保存发音难点归档失败', e)
+  } finally {
+    savingPronunciation.value = false
+  }
+}
+
+const clearPronunciation = () => {
+  pronunciationForm.value = {
+    polyphonicWords: '',
+    linking: '',
+    stress: '',
+    breathPoints: '',
+    isPublic: false
+  }
+}
+
+const loadPracticeStats = async () => {
+  try {
+    const stats = await getPracticeSessionStats(userId, route.params.id)
+    practiceStats.value = stats
+  } catch (e) {
+    console.error('加载练习统计失败', e)
+  }
+}
+
+const formatElapsedTime = (seconds) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds || seconds === 0) return '0分钟'
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  if (hours > 0) {
+    return `${hours}小时${mins}分钟`
+  } else if (mins > 0) {
+    return `${mins}分钟${secs > 0 ? secs + '秒' : ''}`
+  }
+  return `${secs}秒`
+}
+
+const formatRelativeTime = (time) => {
+  if (!time) return '暂无'
+  const now = new Date()
+  const target = new Date(time)
+  const diff = now - target
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 30) return `${days}天前`
+  return time.replace('T', ' ').substring(0, 10)
+}
+
+const startPractice = async () => {
+  if (savingPractice.value) return
+  savingPractice.value = true
+  try {
+    const startTime = new Date()
+    const session = await startPracticeSession({
+      userId,
+      manuscriptId: route.params.id,
+      startTime: startTime.toISOString()
+    })
+    if (session) {
+      currentSessionId.value = session.id
+      sessionStartTime.value = startTime
+      practiceSessionActive.value = true
+      elapsedSeconds.value = 0
+      sessionTimer.value = setInterval(() => {
+        elapsedSeconds.value++
+      }, 1000)
+      ElMessage.success('练习已开始，专注朗读吧！')
+    }
+  } catch (e) {
+    console.error('开始练习失败', e)
+  } finally {
+    savingPractice.value = false
+  }
+}
+
+const endPractice = () => {
+  if (sessionTimer.value) {
+    clearInterval(sessionTimer.value)
+    sessionTimer.value = null
+  }
+  practiceForm.value = {
+    completedParagraphs: '',
+    selfAssessmentStatus: '',
+    selfAssessmentScore: null,
+    selfAssessmentNote: ''
+  }
+  showPracticeEndDialog.value = true
+}
+
+const selectSelfAssessment = (value) => {
+  practiceForm.value.selfAssessmentStatus = practiceForm.value.selfAssessmentStatus === value ? '' : value
+}
+
+const savePracticeSession = async () => {
+  if (savingPractice.value || !currentSessionId.value) return
+  savingPractice.value = true
+  try {
+    const endTime = new Date()
+    const completedParagraphs = Array.isArray(practiceForm.value.completedParagraphs)
+      ? practiceForm.value.completedParagraphs.join(',')
+      : practiceForm.value.completedParagraphs
+    const saved = await endPracticeSession(currentSessionId.value, {
+      endTime: endTime.toISOString(),
+      durationSeconds: elapsedSeconds.value,
+      completedParagraphs,
+      selfAssessmentStatus: practiceForm.value.selfAssessmentStatus,
+      selfAssessmentScore: practiceForm.value.selfAssessmentScore,
+      selfAssessmentNote: practiceForm.value.selfAssessmentNote
+    })
+    if (saved) {
+      ElMessage.success('练习记录已保存！')
+      showPracticeEndDialog.value = false
+      practiceSessionActive.value = false
+      currentSessionId.value = null
+      sessionStartTime.value = null
+      elapsedSeconds.value = 0
+      loadPracticeStats()
+    }
+  } catch (e) {
+    console.error('保存练习记录失败', e)
+  } finally {
+    savingPractice.value = false
+  }
 }
 
 onMounted(() => {
@@ -2168,5 +2587,243 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   min-height: 60vh;
+}
+
+.timer-display {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.practice-stats {
+  margin: 16px auto 0;
+  max-width: var(--prose-max-width);
+  background: linear-gradient(135deg, #ecf5ff 0%, #f0f9eb 100%);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.practice-stats-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
+  margin-bottom: 12px;
+}
+
+.practice-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.practice-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.practice-stat-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.practice-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.diff-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diff-group-actions .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.pronunciation-summary {
+  background: #fdf6ec;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-left: 3px solid #e6a23c;
+}
+
+.pronunciation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pronunciation-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.pronunciation-item.polyphonic {
+  background: #fef0f0;
+}
+
+.pronunciation-item.polyphonic .pronunciation-badge {
+  background: #f56c6c;
+}
+
+.pronunciation-item.linking {
+  background: #ecf5ff;
+}
+
+.pronunciation-item.linking .pronunciation-badge {
+  background: #409eff;
+}
+
+.pronunciation-item.stress {
+  background: #fdf6ec;
+}
+
+.pronunciation-item.stress .pronunciation-badge {
+  background: #e6a23c;
+}
+
+.pronunciation-item.breath {
+  background: #f0f9eb;
+}
+
+.pronunciation-item.breath .pronunciation-badge {
+  background: #67c23a;
+}
+
+.pronunciation-text {
+  color: #606266;
+  flex: 1;
+}
+
+.pronunciation-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #fdf6ec 0%, #fef0f0 100%);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.pronunciation-section-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e6a23c;
+}
+
+.pronunciation-section-tip {
+  font-size: 12px;
+  color: #909399;
+}
+
+.practice-summary-card {
+  background: linear-gradient(135deg, #ecf5ff 0%, #f0f9eb 100%);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.practice-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.practice-summary-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.practice-summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #409eff;
+  font-family: 'Courier New', monospace;
+}
+
+.self-assessment-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.self-assessment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f5f7fa;
+}
+
+.self-assessment-option:hover {
+  background: #ecf5ff;
+  transform: translateY(-2px);
+}
+
+.self-assessment-option.active {
+  border-color: var(--assess-color, #409eff);
+  background: #ecf5ff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.assess-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.self-assessment-option:hover .assess-dot {
+  transform: scale(1.1);
+}
+
+.assess-label {
+  font-size: 13px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.self-assessment-option.active .assess-label {
+  color: var(--assess-color, #409eff);
+}
+
+.practice-score-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.practice-score-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
 }
 </style>

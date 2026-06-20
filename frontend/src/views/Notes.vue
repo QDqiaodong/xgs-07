@@ -170,6 +170,18 @@
                 <el-icon class="extra-stat-icon"><Operation /></el-icon>
                 练习次数：<strong>{{ note.paragraphProgress.totalPracticeCount || 0 }}</strong> 次
               </span>
+              <span class="extra-stat-item" v-if="note.practiceSessionStats?.sessionCount > 0">
+                <el-icon class="extra-stat-icon"><Timer /></el-icon>
+                会话次数：<strong>{{ note.practiceSessionStats.sessionCount || 0 }}</strong> 次
+              </span>
+              <span class="extra-stat-item" v-if="note.practiceSessionStats?.totalDurationSeconds > 0">
+                <el-icon class="extra-stat-icon"><Clock /></el-icon>
+                累计时长：<strong>{{ formatDuration(note.practiceSessionStats.totalDurationSeconds || 0) }}</strong>
+              </span>
+              <span class="extra-stat-item" v-if="note.practiceSessionStats?.averageScore > 0">
+                <el-icon class="extra-stat-icon"><Star /></el-icon>
+                平均评分：<strong>{{ Number(note.practiceSessionStats.averageScore).toFixed(1) }}</strong> 分
+              </span>
               <span class="extra-stat-item">
                 <el-icon class="extra-stat-icon"><Clock /></el-icon>
                 最近练习：<strong>{{ formatRelativeTime(note.paragraphProgress.lastPracticeTime) }}</strong>
@@ -318,8 +330,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation, Star, Calendar } from '@element-plus/icons-vue'
-import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList, getEmotionScoreTrend } from '@/api'
+import { Document, Edit, Delete, TrendCharts, Warning, Microphone, MagicStick, EditPen, InfoFilled, Clock, Operation, Star, Calendar, Timer } from '@element-plus/icons-vue'
+import { getUserNotes, deleteNote as apiDeleteNote, saveNote, getManuscriptById, getUserTrainingProgressList, getEmotionScoreTrend, getPracticeSessionStats } from '@/api'
 import { getCurrentUserId } from '@/utils/storage'
 import PracticeCalendar from '@/components/PracticeCalendar.vue'
 
@@ -367,6 +379,19 @@ const formatRelativeTime = (time) => {
   if (hours < 24) return `${hours}小时前`
   if (days < 30) return `${days}天前`
   return formatTime(time)
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds || seconds === 0) return '0分钟'
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  if (hours > 0) {
+    return `${hours}小时${mins}分钟`
+  } else if (mins > 0) {
+    return `${mins}分钟${secs > 0 ? secs + '秒' : ''}`
+  }
+  return `${secs}秒`
 }
 
 const getScoreClass = (score) => {
@@ -506,6 +531,15 @@ const loadList = async () => {
             mastered: 0, strengthen: 0, skip: 0, total: 0, percent: 0,
             totalPracticeCount: 0, lastPracticeTime: null
           }
+        }
+        
+        try {
+          const sessionStats = await getPracticeSessionStats(userId, allNotes[i].manuscriptId)
+          if (sessionStats) {
+            allNotes[i].practiceSessionStats = sessionStats
+          }
+        } catch (e) {
+          console.error('加载练习会话统计失败', e)
         }
         
         validNotes.push(allNotes[i])

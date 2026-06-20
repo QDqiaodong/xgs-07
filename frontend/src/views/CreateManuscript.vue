@@ -124,7 +124,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createManuscript, updateManuscript, getManuscriptById, assessDifficulty } from '@/api'
-import { saveDraft, getDraft, removeDraft, getCurrentUserId } from '@/utils/storage'
+import { saveDraft, getDraft, removeDraft, getCurrentUserId, formatUserId } from '@/utils/storage'
 
 const route = useRoute()
 const router = useRouter()
@@ -269,7 +269,7 @@ const submitForm = async () => {
     if (valid) {
       submitting.value = true
       try {
-        form.value.createUser = 'user_' + getCurrentUserId()
+        form.value.createUser = formatUserId(getCurrentUserId())
         if (isEdit.value) {
           await updateManuscript(route.params.id, form.value)
           ElMessage.success('修改成功')

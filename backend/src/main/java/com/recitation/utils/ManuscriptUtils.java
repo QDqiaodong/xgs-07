@@ -1,5 +1,7 @@
 package com.recitation.utils;
 
+import com.recitation.entity.Manuscript;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +11,35 @@ public class ManuscriptUtils {
     private static final List<String> POETRY_KEYWORDS = Arrays.asList(
             "诗", "词", "曲", "赋", "古诗", "唐诗", "宋词", "元曲", "绝句", "律诗", "乐府"
     );
+
+    private static final String USER_ID_PREFIX = "user_";
+
+    public static String formatUserId(String userId) {
+        if (userId == null || userId.isBlank()) return null;
+        String trimmed = userId.trim();
+        if (trimmed.startsWith(USER_ID_PREFIX)) return trimmed;
+        return USER_ID_PREFIX + trimmed;
+    }
+
+    public static String formatUserId(Long userId) {
+        if (userId == null) return null;
+        return USER_ID_PREFIX + userId;
+    }
+
+    public static boolean canAccessManuscript(Manuscript manuscript, String userId) {
+        if (manuscript == null) return false;
+        if (Boolean.TRUE.equals(manuscript.getIsPublic())) return true;
+        String createUser = manuscript.getCreateUser();
+        String formattedUserId = formatUserId(userId);
+        return createUser != null && formattedUserId != null && createUser.equals(formattedUserId);
+    }
+
+    public static boolean canModifyManuscript(Manuscript manuscript, String userId) {
+        if (manuscript == null) return false;
+        String createUser = manuscript.getCreateUser();
+        String formattedUserId = formatUserId(userId);
+        return createUser != null && formattedUserId != null && createUser.equals(formattedUserId);
+    }
 
     public static String detectManuscriptType(String categoryName, String content) {
         if (categoryName == null) categoryName = "";

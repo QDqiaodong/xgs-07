@@ -136,6 +136,23 @@ export const getCurrentUserId = () => {
   return 1
 }
 
+export const USER_ID_PREFIX = 'user_'
+
+export const formatUserId = (userId) => {
+  if (userId === null || userId === undefined || userId === '') return null
+  const strUserId = String(userId)
+  if (strUserId.startsWith(USER_ID_PREFIX)) return strUserId
+  return USER_ID_PREFIX + strUserId
+}
+
+export const canAccessManuscript = (manuscript, userId) => {
+  if (!manuscript) return false
+  if (manuscript.isPublic) return true
+  const formattedUserId = formatUserId(userId)
+  const createUser = manuscript.createUser
+  return createUser && formattedUserId && createUser === formattedUserId
+}
+
 export const saveDifficulty = (userId, manuscriptId, difficultyData) => {
   try {
     localStorage.setItem(DIFFICULTY_KEY + userId + '_' + manuscriptId, JSON.stringify({

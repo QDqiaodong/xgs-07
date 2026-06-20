@@ -291,17 +291,19 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
 }
 
-export const analyzeDifficultContent = (content) => {
+export const analyzeDifficultContent = (content, manuscriptType = 'prose') => {
   if (!content) return { paragraphs: [], stats: { long: 0, tongue: 0, breath: 0, misread: 0 } }
 
   const paragraphs = []
   const stats = { long: 0, tongue: 0, breath: 0, misread: 0 }
 
-  const lines = content.split(/\n+/).filter(l => l.trim())
-  lines.forEach((line) => {
-    const sentences = splitSentences(line)
+  const paragraphSections = getParagraphSections(content, manuscriptType)
+
+  paragraphSections.forEach((section) => {
+    const paraContent = section.content
+    const sentences = splitSentences(paraContent)
     const analysis = {
-      content: line,
+      content: paraContent,
       longSentences: [],
       tongueTwisters: [],
       breathingPoints: [],

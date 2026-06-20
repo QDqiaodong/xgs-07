@@ -699,7 +699,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession } from '@/api'
-import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty } from '@/utils/storage'
+import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
@@ -944,13 +944,10 @@ const loadDifficultyAnalysis = () => {
     difficultyStats.value = savedData.stats || { long: 0, tongue: 0, breath: 0, misread: 0 }
     return
   }
-  const result = analyzeDifficultContent(manuscript.value.content)
+  const result = analyzeDifficultContent(manuscript.value.content, manuscriptType.value)
   const analysisMap = {}
-  const paraSections = paragraphSections.value
   result.paragraphs.forEach((p, idx) => {
-    if (idx < paraSections.length) {
-      analysisMap[idx] = p
-    }
+    analysisMap[idx] = p
   })
   difficultyAnalysis.value = analysisMap
   difficultyStats.value = result.stats
@@ -1196,7 +1193,7 @@ const loadDetail = async () => {
       notAllowed.value = true
       return
     }
-    if (!manuscript.value.isPublic && manuscript.value.createUser !== 'user_' + userId) {
+    if (!canAccessManuscript(manuscript.value, userId)) {
       notAllowed.value = true
       manuscript.value = null
       return

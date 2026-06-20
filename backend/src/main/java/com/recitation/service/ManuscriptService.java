@@ -7,6 +7,7 @@ import com.recitation.repository.FavoriteRepository;
 import com.recitation.repository.ManuscriptRepository;
 import com.recitation.repository.ParagraphProgressRepository;
 import com.recitation.repository.PracticeNoteRepository;
+import com.recitation.utils.ManuscriptUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -69,9 +70,7 @@ public class ManuscriptService {
         if (manuscript == null) {
             return null;
         }
-        String createUser = manuscript.getCreateUser();
-        String currentUserId = dto.getCreateUser();
-        if (createUser == null || !createUser.equals(currentUserId)) {
+        if (!ManuscriptUtils.canModifyManuscript(manuscript, dto.getCreateUser())) {
             return null;
         }
         manuscript.setTitle(dto.getTitle());
@@ -111,12 +110,8 @@ public class ManuscriptService {
                 redisCacheService.cacheManuscript(id, manuscript);
             }
         }
-        if (manuscript != null && !manuscript.getIsPublic()) {
-            String createUser = manuscript.getCreateUser();
-            String currentUserId = userId != null ? "user_" + userId : null;
-            if (createUser == null || !createUser.equals(currentUserId)) {
-                return null;
-            }
+        if (!ManuscriptUtils.canAccessManuscript(manuscript, userId)) {
+            return null;
         }
         return manuscript;
     }
@@ -129,12 +124,8 @@ public class ManuscriptService {
     @Transactional
     public Manuscript getManuscriptDetail(Long id, String userId) {
         Manuscript manuscript = manuscriptRepository.findById(id).orElse(null);
-        if (manuscript != null && !manuscript.getIsPublic()) {
-            String createUser = manuscript.getCreateUser();
-            String currentUserId = userId != null ? "user_" + userId : null;
-            if (createUser == null || !createUser.equals(currentUserId)) {
-                return null;
-            }
+        if (!ManuscriptUtils.canAccessManuscript(manuscript, userId)) {
+            return null;
         }
         if (manuscript != null) {
             manuscriptRepository.incrementViewCount(id);
@@ -175,9 +166,7 @@ public class ManuscriptService {
         if (manuscript == null) {
             return false;
         }
-        String createUser = manuscript.getCreateUser();
-        String currentUserId = userId != null ? "user_" + userId : null;
-        if (createUser == null || !createUser.equals(currentUserId)) {
+        if (!ManuscriptUtils.canModifyManuscript(manuscript, userId)) {
             return false;
         }
         practiceNoteRepository.deleteByManuscriptId(id);

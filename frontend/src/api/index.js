@@ -2,6 +2,10 @@ import request from './request'
 
 export const getCategories = () => request.get('/categories')
 
+export const assessDifficulty = (content) => request.post('/difficulty/assess', { content })
+
+export const getDifficultyLevels = () => request.get('/difficulty/levels')
+
 export const getManuscripts = (params) => request.get('/manuscripts', { params })
 
 export const getManuscriptDetail = (id, userId) => request.get(`/manuscripts/${id}/detail`, { params: { userId } })

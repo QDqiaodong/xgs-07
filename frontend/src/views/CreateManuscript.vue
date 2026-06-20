@@ -36,6 +36,29 @@
                   </div>
                 </el-option>
               </el-select>
+              <div class="difficulty-assist">
+                <el-button size="small" link type="primary" :loading="assessing" @click="recommendDifficulty">
+                  <el-icon><MagicStick /></el-icon> 智能推荐
+                </el-button>
+                <div v-if="assessment" class="assessment-result">
+                  <div class="assessment-recommend">
+                    <span class="assessment-label">推荐</span>
+                    <span :class="['diff-tag', 'diff-' + assessment.recommendedLevelNum]" @click="applyRecommendation">
+                      {{ assessment.recommendedLevel }} Lv.{{ assessment.recommendedLevelNum }}
+                    </span>
+                    <span class="assessment-score">综合分 {{ assessment.overallScore }}</span>
+                    <el-button size="small" link type="primary" @click="applyRecommendation">采用</el-button>
+                  </div>
+                  <div class="assessment-dimensions">
+                    <div v-for="dim in assessment.dimensions" :key="dim.dimension" class="dim-item">
+                      <span class="dim-label">{{ dim.dimensionLabel }}</span>
+                      <span class="dim-metric">{{ dim.metricLabel }}</span>
+                      <span :class="['dim-level', 'diff-' + dim.levelNum]">{{ dim.level }}</span>
+                      <span class="dim-weight">权重 {{ Math.round(dim.weight * 100) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
@@ -94,7 +117,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCategories, createManuscript, updateManuscript, getManuscriptById } from '@/api'
+import { getCategories, createManuscript, updateManuscript, getManuscriptById, assessDifficulty } from '@/api'
 import { saveDraft, getDraft, removeDraft, getCurrentUserId } from '@/utils/storage'
 
 const route = useRoute()
@@ -103,6 +126,8 @@ const formRef = ref(null)
 const submitting = ref(false)
 const categories = ref([])
 const isEdit = computed(() => !!route.params.id)
+const assessing = ref(false)
+const assessment = ref(null)
 
 const difficultyOptions = [
   { value: '入门', label: '入门', level: 1, description: '短句多、用词简单' },
@@ -202,6 +227,35 @@ const insertFormat = (type) => {
 const clearFormat = () => {
   form.value.content = form.value.content.replace(/　　/g, '').replace(/\n{3,}/g, '\n\n')
 }
+
+const recommendDifficulty = async () => {
+  const content = form.value.content
+  if (!content || !content.trim()) {
+    ElMessage.warning('请先输入文稿内容')
+    return
+  }
+  assessing.value = true
+  try {
+    assessment.value = await assessDifficulty(content)
+    ElMessage.success(`推荐难度：${assessment.value.recommendedLevel}（综合分 ${assessment.value.overallScore}）`)
+  } catch (e) {
+    console.error(e)
+  } finally {
+    assessing.value = false
+  }
+}
+
+const applyRecommendation = () => {
+  if (!assessment.value) return
+  form.value.difficulty = assessment.value.recommendedLevel
+  ElMessage.success(`已采用推荐难度：${assessment.value.recommendedLevel}`)
+}
+
+watch(() => form.value.content, (val) => {
+  if (assessment.value && (!val || !val.trim())) {
+    assessment.value = null
+  }
+})
 
 const submitForm = async () => {
   if (!formRef.value) return
@@ -332,6 +386,103 @@ onUnmounted(() => {
 .diff-desc {
   font-size: 13px;
   color: #606266;
+}
+
+.difficulty-assist {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.assessment-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+}
+
+.assessment-recommend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assessment-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.assessment-recommend .diff-tag {
+  cursor: pointer;
+}
+
+.assessment-score {
+  font-size: 12px;
+  color: #909399;
+}
+
+.assessment-dimensions {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dim-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.dim-label {
+  font-weight: 600;
+  color: #303133;
+  min-width: 64px;
+}
+
+.dim-metric {
+  color: #606266;
+}
+
+.dim-level {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.dim-level.diff-1 {
+  color: #67c23a;
+  background: #f0f9eb;
+  border-color: #c2e7b0;
+}
+
+.dim-level.diff-2 {
+  color: #409eff;
+  background: #ecf5ff;
+  border-color: #b3d8ff;
+}
+
+.dim-level.diff-3 {
+  color: #e6a23c;
+  background: #fdf6ec;
+  border-color: #f5dab1;
+}
+
+.dim-level.diff-4 {
+  color: #f56c6c;
+  background: #fef0f0;
+  border-color: #fbc4c4;
+}
+
+.dim-weight {
+  color: #909399;
+  margin-left: auto;
 }
 </style>
 

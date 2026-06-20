@@ -432,6 +432,23 @@
       </div>
     </div>
 
+    <div class="reading-follow-bar" v-if="manuscript && paragraphSections.length > 0">
+      <div class="follow-bar-progress">
+        <div class="follow-bar-fill" :style="{ width: followProgressPercent + '%' }"></div>
+      </div>
+      <div class="follow-bar-content">
+        <span class="follow-bar-segment">
+          <span class="follow-bar-num">第 {{ currentParagraphIndex + 1 }} 段</span>
+          <span class="follow-bar-total">/ 共 {{ paragraphSections.length }} 段</span>
+        </span>
+        <span :class="['follow-bar-status', 'status-' + getParagraphStatus(currentParagraphIndex)]">
+          <span class="follow-bar-dot"></span>
+          {{ getStatusLabel(getParagraphStatus(currentParagraphIndex)) }}
+        </span>
+        <span class="follow-bar-percent">{{ followProgressPercent }}%</span>
+      </div>
+    </div>
+
     <el-dialog v-model="showNoteDialog" title="记录练习笔记" width="600px">
       <el-form :model="noteForm" label-width="100px">
         <div class="form-section-title">
@@ -677,7 +694,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera } from '@element-plus/icons-vue'
@@ -713,6 +730,8 @@ const savingStatusMap = ref({})
 const rhythmPanelVisible = ref(true)
 const rhythmData = ref({})
 const activeParagraphIndex = ref(-1)
+const currentSectionIndex = ref(0)
+let scrollRaf = null
 const showRhythmEditor = ref(false)
 const editingParagraphIndex = ref(-1)
 const rhythmForm = ref({
@@ -845,6 +864,24 @@ const progressPercent = computed(() => {
   const total = paragraphSections.value.length
   if (total === 0) return 0
   return Math.round((progressStats.value.mastered / total) * 100)
+})
+
+const currentParagraphIndex = computed(() => {
+  const sections = contentSections.value
+  if (sections.length === 0) return 0
+  let idx = currentSectionIndex.value
+  if (idx < 0) idx = 0
+  if (idx >= sections.length) idx = sections.length - 1
+  let paraIndex = getParagraphIndex(idx)
+  const total = paragraphSections.value.length
+  if (paraIndex >= total) paraIndex = Math.max(0, total - 1)
+  return paraIndex
+})
+
+const followProgressPercent = computed(() => {
+  const total = paragraphSections.value.length
+  if (total === 0) return 0
+  return Math.round(((currentParagraphIndex.value + 1) / total) * 100)
 })
 
 const getParagraphStatus = (index) => {
@@ -1074,6 +1111,31 @@ const onParagraphLeave = () => {
   activeParagraphIndex.value = -1
 }
 
+const updateCurrentSection = () => {
+  const sections = document.querySelectorAll('.content-section')
+  if (!sections.length) {
+    currentSectionIndex.value = 0
+    return
+  }
+  const triggerLine = window.innerHeight * 0.35
+  let current = 0
+  sections.forEach((el, idx) => {
+    const rect = el.getBoundingClientRect()
+    if (rect.top <= triggerLine) {
+      current = idx
+    }
+  })
+  currentSectionIndex.value = current
+}
+
+const onScroll = () => {
+  if (scrollRaf) return
+  scrollRaf = requestAnimationFrame(() => {
+    updateCurrentSection()
+    scrollRaf = null
+  })
+}
+
 const openRhythmEditor = (paraIndex) => {
   editingParagraphIndex.value = paraIndex
   const data = rhythmData.value[paraIndex] || {}
@@ -1148,6 +1210,8 @@ const loadDetail = async () => {
     loadEmotionData()
     loadPronunciationDifficulty()
     loadPracticeStats()
+    await nextTick()
+    updateCurrentSection()
   } catch (e) {
     console.error(e)
     notAllowed.value = true
@@ -1444,6 +1508,15 @@ const savePracticeSession = async () => {
 
 onMounted(() => {
   loadDetail()
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+  if (scrollRaf) {
+    cancelAnimationFrame(scrollRaf)
+    scrollRaf = null
+  }
 })
 </script>
 
@@ -2825,5 +2898,126 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #606266;
+}
+
+.reading-follow-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .reading-follow-bar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    border-top: 1px solid #ebeef5;
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .follow-bar-progress {
+    height: 3px;
+    background: #f0f2f5;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .follow-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
+    border-radius: 2px;
+    transition: width 0.2s ease;
+  }
+
+  .follow-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #606266;
+  }
+
+  .follow-bar-segment {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .follow-bar-num {
+    font-size: 15px;
+    font-weight: 700;
+    color: #303133;
+  }
+
+  .follow-bar-total {
+    font-size: 12px;
+    color: #909399;
+  }
+
+  .follow-bar-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    font-size: 12px;
+    color: #909399;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #f4f4f5;
+  }
+
+  .follow-bar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c0c4cc;
+    flex-shrink: 0;
+  }
+
+  .follow-bar-status.status-mastered {
+    color: #67c23a;
+    background: #f0f9eb;
+  }
+
+  .follow-bar-status.status-mastered .follow-bar-dot {
+    background: #67c23a;
+  }
+
+  .follow-bar-status.status-strengthen {
+    color: #e6a23c;
+    background: #fdf6ec;
+  }
+
+  .follow-bar-status.status-strengthen .follow-bar-dot {
+    background: #e6a23c;
+  }
+
+  .follow-bar-status.status-skip {
+    color: #909399;
+    background: #f4f4f5;
+  }
+
+  .follow-bar-status.status-skip .follow-bar-dot {
+    background: #909399;
+  }
+
+  .follow-bar-percent {
+    font-size: 12px;
+    font-weight: 600;
+    color: #409eff;
+    font-family: 'Courier New', monospace;
+    min-width: 36px;
+    text-align: right;
+  }
+
+  .detail-page {
+    padding-bottom: 72px;
+  }
 }
 </style>

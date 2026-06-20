@@ -10,7 +10,7 @@
 
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="文稿标题" prop="title">
-          <el-input v-model="form.title" placeholder="请输入文稿标题" maxlength="200" show-word-limit />
+          <el-input v-model="form.title" placeholder="请输入文稿标题" maxlength="100" show-word-limit />
         </el-form-item>
 
         <el-row :gutter="20">
@@ -74,16 +74,22 @@
               <el-button size="small" @click="insertFormat('paragraph')">分段</el-button>
               <el-button size="small" @click="clearFormat">清除格式</el-button>
             </el-button-group>
-            <span class="word-count">字数：{{ contentLength }}</span>
+            <span class="word-count">字数：{{ contentLength }} / 20000</span>
           </div>
           <el-input
             v-model="form.content"
             type="textarea"
             :rows="15"
+            maxlength="20000"
+            show-word-limit
             placeholder="请输入文稿内容..."
             @input="onContentInput"
             resize="vertical"
           />
+          <div class="content-length-tip">
+            <el-icon><InfoFilled /></el-icon>
+            <span>篇幅参考：短诗建议 ≤ 2000 字，散文 ≤ 8000 字，演讲稿 ≤ 20000 字，超长内容可能影响页面正常展示。</span>
+          </div>
         </el-form-item>
 
         <el-form-item label="发布设置">
@@ -339,6 +345,24 @@ onUnmounted(() => {
 .word-count {
   font-size: 13px;
   color: #909399;
+}
+
+.content-length-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fdf6ec;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b88230;
+  line-height: 1.6;
+}
+
+.content-length-tip .el-icon {
+  flex-shrink: 0;
+  font-size: 14px;
 }
 
 .difficulty-option {

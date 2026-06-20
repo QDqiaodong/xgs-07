@@ -124,12 +124,16 @@ public class AuthorProfileController {
 
         List<EmotionBand> emotionBands = emotionBandRepository.findByManuscriptIdIn(manuscriptIds);
 
-        Map<String, Long> emotionCount = emotionBands.stream()
-                .filter(e -> e.getEmotionType() != null && !e.getEmotionType().isBlank())
-                .collect(Collectors.groupingBy(
-                        EmotionBand::getEmotionType,
-                        Collectors.counting()
-                ));
+        Set<String> uniqueKey = new HashSet<>();
+        Map<String, Long> emotionCount = new HashMap<>();
+        for (EmotionBand e : emotionBands) {
+            if (e.getEmotionType() != null && !e.getEmotionType().isBlank()) {
+                String key = e.getManuscriptId() + "_" + e.getParagraphIndex();
+                if (uniqueKey.add(key)) {
+                    emotionCount.merge(e.getEmotionType(), 1L, Long::sum);
+                }
+            }
+        }
 
         if (emotionCount.isEmpty()) {
             return Collections.emptyList();

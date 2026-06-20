@@ -22,7 +22,7 @@ public class PracticeNoteDTO {
 
     private String otherNotes;
 
-    private Integer emotionControlScore;
+    private Double emotionControlScore;
 
     private String emotionControlNote;
 }

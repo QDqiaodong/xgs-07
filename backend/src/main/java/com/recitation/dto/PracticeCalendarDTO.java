@@ -24,7 +24,7 @@ public class PracticeCalendarDTO {
         private Long manuscriptId;
         private String manuscriptTitle;
         private Integer practiceCount;
-        private Integer emotionScore;
+        private Double emotionScore;
         private String noteSummary;
     }
 }

@@ -38,7 +38,7 @@ public interface PracticeNoteRepository extends JpaRepository<PracticeNote, Long
                            @Param("toneControl") String toneControl,
                            @Param("emotionExpression") String emotionExpression,
                            @Param("otherNotes") String otherNotes,
-                           @Param("emotionControlScore") Integer emotionControlScore,
+                           @Param("emotionControlScore") Double emotionControlScore,
                            @Param("emotionControlNote") String emotionControlNote);
 
     @Modifying

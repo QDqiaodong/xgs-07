@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "emotion_band", indexes = {
         @Index(name = "idx_emotion_user_manuscript", columnList = "userId, manuscriptId")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_manuscript_paragraph", columnNames = {"userId", "manuscriptId", "paragraphIndex"})
 })
 public class EmotionBand {
 

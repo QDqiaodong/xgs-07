@@ -39,7 +39,7 @@ public class PracticeNote {
     @Column(columnDefinition = "TEXT")
     private String otherNotes;
 
-    private Integer emotionControlScore;
+    private Double emotionControlScore;
 
     @Column(columnDefinition = "TEXT")
     private String emotionControlNote;

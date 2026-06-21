@@ -8,6 +8,7 @@ import com.recitation.repository.FavoriteRepository;
 import com.recitation.repository.ManuscriptRepository;
 import com.recitation.repository.ParagraphProgressRepository;
 import com.recitation.repository.PracticeNoteRepository;
+import com.recitation.utils.AuthorNameUtils;
 import com.recitation.utils.ManuscriptUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -53,7 +54,7 @@ public class ManuscriptService {
         manuscript.setContent(dto.getContent());
         manuscript.setIntroduction(dto.getIntroduction());
         manuscript.setCategoryId(dto.getCategoryId());
-        manuscript.setAuthor(dto.getAuthor());
+        manuscript.setAuthor(AuthorNameUtils.normalize(dto.getAuthor()));
         manuscript.setDifficulty(dto.getDifficulty());
         manuscript.setIsPublic(dto.getIsPublic() != null ? dto.getIsPublic() : false);
         manuscript.setCreateUser(dto.getCreateUser());
@@ -87,7 +88,7 @@ public class ManuscriptService {
         manuscript.setContent(dto.getContent());
         manuscript.setIntroduction(dto.getIntroduction());
         manuscript.setCategoryId(dto.getCategoryId());
-        manuscript.setAuthor(dto.getAuthor());
+        manuscript.setAuthor(AuthorNameUtils.normalize(dto.getAuthor()));
         manuscript.setDifficulty(dto.getDifficulty());
         if (dto.getIsPublic() != null) {
             manuscript.setIsPublic(dto.getIsPublic());

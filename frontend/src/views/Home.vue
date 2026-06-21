@@ -72,7 +72,21 @@
                 <el-icon :size="32"><Collection /></el-icon>
               </div>
               <h3>{{ cat.name }}</h3>
-              <p>{{ cat.description }}</p>
+              <p class="cat-desc">{{ cat.description }}</p>
+              <div class="cat-meta">
+                <div v-if="cat.genre" class="cat-meta-item">
+                  <span class="cat-meta-label">体裁</span>
+                  <span class="cat-meta-value">{{ cat.genre }}</span>
+                </div>
+                <div v-if="cat.targetAudience" class="cat-meta-item">
+                  <span class="cat-meta-label">适合</span>
+                  <span class="cat-meta-value">{{ cat.targetAudience }}</span>
+                </div>
+                <div v-if="cat.trainingFocus" class="cat-meta-item">
+                  <span class="cat-meta-label">训练</span>
+                  <span class="cat-meta-value">{{ cat.trainingFocus }}</span>
+                </div>
+              </div>
             </div>
           </el-card>
         </el-col>
@@ -187,24 +201,62 @@ onMounted(() => {
 }
 
 .cat-content {
-  padding: 20px 10px;
+  padding: 16px 12px;
+  text-align: left;
 }
 
 .cat-icon {
   color: #409eff;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
 .cat-content h3 {
   font-size: 18px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #303133;
+  text-align: center;
 }
 
-.cat-content p {
+.cat-desc {
   font-size: 13px;
   color: #909399;
   line-height: 1.5;
+  margin-bottom: 12px;
+  text-align: center;
+  min-height: 40px;
+}
+
+.cat-meta {
+  border-top: 1px dashed #ebeef5;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cat-meta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cat-meta-label {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ecf5ff 0%, #d9ecff 100%);
+  color: #409eff;
+}
+
+.cat-meta-value {
+  color: #606266;
+  flex: 1;
+  word-break: break-all;
 }
 
 .package-card {

@@ -50,6 +50,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Operation } from '@element-plus/icons-vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import { normalizeAuthorName } from '@/utils/author'
 
 const props = defineProps({
   manuscript: {
@@ -75,7 +76,10 @@ const goDetail = () => {
 }
 
 const goAuthorProfile = (author) => {
-  router.push(`/author/${encodeURIComponent(author)}`)
+  const normalized = normalizeAuthorName(author)
+  if (normalized) {
+    router.push(`/author/${encodeURIComponent(normalized)}`)
+  }
 }
 </script>
 

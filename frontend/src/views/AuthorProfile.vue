@@ -127,6 +127,7 @@ import { ElMessage } from 'element-plus'
 import { Document, View, Star, Warning, Collection, MagicStick, InfoFilled } from '@element-plus/icons-vue'
 import { getAuthorProfile } from '@/api'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import { normalizeAuthorName } from '@/utils/author'
 
 const route = useRoute()
 const router = useRouter()
@@ -155,7 +156,8 @@ const goManuscript = (id) => {
 const loadProfile = async () => {
   loading.value = true
   try {
-    const name = decodeURIComponent(route.params.name)
+    const rawName = decodeURIComponent(route.params.name)
+    const name = normalizeAuthorName(rawName) || rawName
     const res = await getAuthorProfile(name)
     profile.value = res
   } catch (e) {

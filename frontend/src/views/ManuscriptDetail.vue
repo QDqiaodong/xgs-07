@@ -728,6 +728,7 @@ import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession, getEmotionCurve } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
+import { normalizeAuthorName } from '@/utils/author'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import EmotionCurve from '@/components/EmotionCurve.vue'
 
@@ -1351,7 +1352,10 @@ const openNoteDialog = async () => {
 }
 
 const goAuthorProfile = (author) => {
-  router.push(`/author/${encodeURIComponent(author)}`)
+  const normalized = normalizeAuthorName(author)
+  if (normalized) {
+    router.push(`/author/${encodeURIComponent(normalized)}`)
+  }
 }
 
 const getScoreClass = (score) => {

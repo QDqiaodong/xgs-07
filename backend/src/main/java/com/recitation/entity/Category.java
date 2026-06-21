@@ -22,6 +22,15 @@ public class Category {
     @Column(length = 200)
     private String description;
 
+    @Column(length = 100)
+    private String genre;
+
+    @Column(length = 100)
+    private String targetAudience;
+
+    @Column(length = 200)
+    private String trainingFocus;
+
     @Column(nullable = false)
     private Integer sortOrder = 0;
 

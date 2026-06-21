@@ -6,6 +6,7 @@ import com.recitation.entity.EmotionBand;
 import com.recitation.entity.Manuscript;
 import com.recitation.repository.EmotionBandRepository;
 import com.recitation.repository.ManuscriptRepository;
+import com.recitation.utils.AuthorNameUtils;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.Resource;
@@ -44,15 +45,42 @@ public class AuthorProfileController {
 
     @GetMapping("/{name}/profile")
     public Result<AuthorProfileDTO> getAuthorProfile(@PathVariable String name) {
-        List<Manuscript> manuscripts = manuscriptRepository
-                .findByAuthorAndIsPublicTrueAndStatus(name, 1);
+        String normalizedName = AuthorNameUtils.normalizeForQuery(name);
+        if (normalizedName == null) {
+            return Result.error("作者名称无效");
+        }
+
+        List<Manuscript> exactMatch = manuscriptRepository
+                .findByAuthorAndIsPublicTrueAndStatus(normalizedName, 1);
+
+        List<Manuscript> manuscripts = new ArrayList<>(exactMatch);
+
+        if (exactMatch.isEmpty()) {
+            List<Manuscript> allPublic = manuscriptRepository.findByIsPublicTrueAndStatus(1);
+            Set<String> seenIds = new HashSet<>();
+            for (Manuscript m : allPublic) {
+                if (AuthorNameUtils.isSameAuthor(m.getAuthor(), normalizedName) && seenIds.add(m.getId().toString())) {
+                    manuscripts.add(m);
+                }
+            }
+        } else {
+            Set<String> seenIds = manuscripts.stream()
+                    .map(m -> m.getId().toString())
+                    .collect(Collectors.toSet());
+            List<Manuscript> allPublic = manuscriptRepository.findByIsPublicTrueAndStatus(1);
+            for (Manuscript m : allPublic) {
+                if (AuthorNameUtils.isSameAuthor(m.getAuthor(), normalizedName) && seenIds.add(m.getId().toString())) {
+                    manuscripts.add(m);
+                }
+            }
+        }
 
         if (manuscripts.isEmpty()) {
             return Result.error("未找到该作者的文稿");
         }
 
         AuthorProfileDTO profile = new AuthorProfileDTO();
-        profile.setAuthor(name);
+        profile.setAuthor(normalizedName);
         profile.setTotalManuscripts(manuscripts.size());
         profile.setTotalViews(manuscripts.stream().mapToInt(m -> m.getViewCount() != null ? m.getViewCount() : 0).sum());
         profile.setTotalFavorites(manuscripts.stream().mapToInt(m -> m.getFavoriteCount() != null ? m.getFavoriteCount() : 0).sum());

@@ -146,7 +146,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createManuscript, updateManuscript, getManuscriptById, assessDifficulty } from '@/api'
 import { saveDraft, getDraft, removeDraft, getCurrentUserId, formatUserId, removeDifficulty } from '@/utils/storage'
 import { normalizeAuthorName } from '@/utils/author'
-import { Check, MagicStick, Document, Refresh, RefreshLeft, Wind, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
+import { Check, MagicStick, Document, Refresh, RefreshLeft, Promotion, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -166,7 +166,7 @@ const difficultyOptions = [
 const draftKey = computed(() => isEdit.value ? `edit_${route.params.id}` : 'new')
 
 const trainingTagOptions = [
-  { value: '换气', label: '换气', icon: Wind, color: '#67c23a', bg: '#f0f9eb' },
+  { value: '换气', label: '换气', icon: Promotion, color: '#67c23a', bg: '#f0f9eb' },
   { value: '重音', label: '重音', icon: Cherry, color: '#f56c6c', bg: '#fef0f0' },
   { value: '节奏', label: '节奏', icon: Tickets, color: '#e6a23c', bg: '#fdf6ec' },
   { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, color: '#409eff', bg: '#ecf5ff' }

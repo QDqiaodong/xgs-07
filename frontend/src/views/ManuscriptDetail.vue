@@ -737,7 +737,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading, TrendCharts, Wind, Cherry, DataAnalysis } from '@element-plus/icons-vue'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading, TrendCharts, Promotion, Cherry, DataAnalysis } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession, getEmotionCurve } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
@@ -848,7 +848,7 @@ const emotionOptions = [
 ]
 
 const TRAINING_TAG_CONFIG = {
-  '换气': { value: '换气', label: '换气', icon: Wind, type: 'success', effect: 'light' },
+  '换气': { value: '换气', label: '换气', icon: Promotion, type: 'success', effect: 'light' },
   '重音': { value: '重音', label: '重音', icon: Cherry, type: 'danger', effect: 'light' },
   '节奏': { value: '节奏', label: '节奏', icon: Tickets, type: 'warning', effect: 'light' },
   '情绪递进': { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, type: 'primary', effect: 'light' }

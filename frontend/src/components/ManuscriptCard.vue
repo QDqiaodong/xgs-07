@@ -62,7 +62,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Operation, Wind, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
+import { Operation, Promotion, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import { normalizeAuthorName } from '@/utils/author'
 
@@ -80,7 +80,7 @@ const props = defineProps({
 const router = useRouter()
 
 const TRAINING_TAG_CONFIG = {
-  '换气': { value: '换气', label: '换气', icon: Wind, type: 'success', effect: 'light' },
+  '换气': { value: '换气', label: '换气', icon: Promotion, type: 'success', effect: 'light' },
   '重音': { value: '重音', label: '重音', icon: Cherry, type: 'danger', effect: 'light' },
   '节奏': { value: '节奏', label: '节奏', icon: Tickets, type: 'warning', effect: 'light' },
   '情绪递进': { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, type: 'primary', effect: 'light' }

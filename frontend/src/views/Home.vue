@@ -11,6 +11,10 @@
         <el-button size="large" @click="$router.push('/manuscripts')">
           浏览文稿
         </el-button>
+        <el-button size="large" type="success" @click="$router.push('/training-packages')">
+          <el-icon><Collection /></el-icon>
+          训练包
+        </el-button>
       </div>
     </el-row>
 
@@ -22,6 +26,36 @@
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="item in hotList" :key="item.id">
           <ManuscriptCard :manuscript="item" />
+        </el-col>
+      </el-row>
+    </div>
+
+    <div class="section" v-if="packages.length > 0">
+      <div class="section-header">
+        <h2>
+          <el-icon style="color:#67c23a"><Collection /></el-icon>
+          训练包推荐
+        </h2>
+        <el-button type="text" @click="$router.push('/training-packages')">查看更多</el-button>
+      </div>
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12" :md="6" :lg="6" v-for="pkg in packages" :key="pkg.id">
+          <div class="package-card" @click="$router.push('/training-packages/' + pkg.id)">
+            <div class="pkg-cover" :style="getPkgCoverStyle(pkg)">
+              <div class="pkg-category" v-if="pkg.categoryName">{{ pkg.categoryName }}</div>
+            </div>
+            <div class="pkg-body">
+              <div class="pkg-head">
+                <h3>{{ pkg.name }}</h3>
+                <DifficultyBadge v-if="pkg.difficulty" :difficulty="pkg.difficulty" size="small" />
+              </div>
+              <p class="pkg-desc">{{ pkg.description }}</p>
+              <div class="pkg-meta">
+                <span><Document /> {{ pkg.items?.length || 0 }} 篇</span>
+                <span v-if="pkg.targetDays"><Calendar /> {{ pkg.targetDays }}天</span>
+              </div>
+            </div>
+          </div>
         </el-col>
       </el-row>
     </div>
@@ -50,21 +84,28 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getHotManuscripts, getCategories } from '@/api'
+import { getHotManuscripts, getCategories, getTrainingPackages } from '@/api'
+import { getCurrentUserId } from '@/utils/storage'
 import ManuscriptCard from '@/components/ManuscriptCard.vue'
+import { Collection, Document, Calendar } from '@element-plus/icons-vue'
+import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const router = useRouter()
+const userId = getCurrentUserId()
 const hotList = ref([])
 const categories = ref([])
+const packages = ref([])
 
 const loadData = async () => {
   try {
-    const [hot, cats] = await Promise.all([
+    const [hot, cats, pkgs] = await Promise.all([
       getHotManuscripts(),
-      getCategories()
+      getCategories(),
+      getTrainingPackages({ userId })
     ])
     hotList.value = hot.slice(0, 8)
     categories.value = cats
+    packages.value = (pkgs || []).slice(0, 4)
   } catch (e) {
     console.error(e)
   }
@@ -72,6 +113,23 @@ const loadData = async () => {
 
 const goCategory = (categoryId) => {
   router.push({ path: '/manuscripts', query: { category: categoryId } })
+}
+
+const pkgCoverColors = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+  'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
+]
+
+const getPkgCoverStyle = (pkg) => {
+  if (pkg.coverImage) {
+    return { backgroundImage: `url(${pkg.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+  }
+  const idx = (pkg.id || 0) % pkgCoverColors.length
+  return { background: pkgCoverColors[idx] }
 }
 
 onMounted(() => {
@@ -148,4 +206,81 @@ onMounted(() => {
   color: #909399;
   line-height: 1.5;
 }
+
+.package-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #ebeef5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+.package-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+  border-color: #67c23a;
+}
+.pkg-cover {
+  height: 110px;
+  position: relative;
+  overflow: hidden;
+}
+.pkg-category {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+.pkg-body {
+  padding: 14px 16px 16px;
+}
+.pkg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.pkg-head h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.pkg-desc {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+  margin: 0 0 10px;
+  height: 39px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.pkg-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: #909399;
+  padding-top: 10px;
+  border-top: 1px dashed #f0f2f5;
+}
+.pkg-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pkg-meta .el-icon { font-size: 13px; }
 </style>

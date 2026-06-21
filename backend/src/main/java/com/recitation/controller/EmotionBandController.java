@@ -37,6 +37,13 @@ public class EmotionBandController {
         return Result.success(emotionBandService.getEmotionList(userId, manuscriptId));
     }
 
+    @GetMapping("/curve")
+    public Result<List<Map<String, Object>>> getEmotionCurve(
+            @RequestParam Long userId,
+            @RequestParam Long manuscriptId) {
+        return Result.success(emotionBandService.getEmotionCurve(userId, manuscriptId));
+    }
+
     @DeleteMapping
     public Result<Void> deleteEmotion(
             @RequestParam Long userId,

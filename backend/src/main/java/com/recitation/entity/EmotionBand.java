@@ -35,6 +35,9 @@ public class EmotionBand {
     @Column(length = 200)
     private String remark;
 
+    @Column
+    private Integer emotionIntensity = 50;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createTime;

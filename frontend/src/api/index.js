@@ -66,6 +66,8 @@ export const getEmotionBands = (userId, manuscriptId) => request.get('/emotion-b
 
 export const getEmotionBandList = (userId, manuscriptId) => request.get('/emotion-bands/list', { params: { userId, manuscriptId } })
 
+export const getEmotionCurve = (userId, manuscriptId) => request.get('/emotion-bands/curve', { params: { userId, manuscriptId } })
+
 export const deleteEmotionBand = (userId, manuscriptId, paragraphIndex) => request.delete('/emotion-bands', { params: { userId, manuscriptId, paragraphIndex } })
 
 export const getAuthorProfile = (name) => request.get(`/authors/${encodeURIComponent(name)}/profile`)
@@ -99,3 +101,25 @@ export const getLatestPracticeSession = (userId, manuscriptId) => request.get('/
 export const getPracticeSessionStats = (userId, manuscriptId) => request.get('/practice-sessions/stats', { params: { userId, manuscriptId } })
 
 export const deletePracticeSession = (id, userId) => request.delete(`/practice-sessions/${id}`, { params: { userId } })
+
+export const getTrainingPackages = (params) => request.get('/training-packages', { params })
+
+export const getTrainingPackageDetail = (id, userId) => request.get(`/training-packages/${id}`, { params: { userId } })
+
+export const getTrainingPackageWithProgress = (id, userId) => request.get(`/training-packages/${id}/with-progress`, { params: { userId } })
+
+export const createTrainingPackage = (data) => request.post('/training-packages', data)
+
+export const updateTrainingPackage = (id, data) => request.put(`/training-packages/${id}`, data)
+
+export const deleteTrainingPackage = (id, userId) => request.delete(`/training-packages/${id}`, { params: { userId } })
+
+export const startTrainingPackage = (id, userId) => request.post(`/training-packages/${id}/progress/start`, null, { params: { userId } })
+
+export const getUserTrainingPackageProgressList = (userId) => request.get('/training-packages/progress/user', { params: { userId } })
+
+export const getTrainingPackageProgress = (id, userId) => request.get(`/training-packages/${id}/progress`, { params: { userId } })
+
+export const updateTrainingPackageProgress = (data) => request.put('/training-packages/progress', data)
+
+export const recordTrainingPractice = (id, userId, minutes) => request.post(`/training-packages/${id}/progress/practice`, null, { params: { userId, minutes } })

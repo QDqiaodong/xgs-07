@@ -82,6 +82,10 @@ public class ManuscriptUtils {
         return splitParagraphContents(content, categoryName).size();
     }
 
+    public static int countParagraphs(String content) {
+        return countParagraphs(content, "");
+    }
+
     public static List<String> splitParagraphContents(String content, String categoryName) {
         List<String> paragraphs = new ArrayList<>();
         if (content == null || content.trim().isEmpty()) {

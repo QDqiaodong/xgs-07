@@ -45,6 +45,16 @@ const routes = [
     path: '/author/:name',
     name: 'AuthorProfile',
     component: () => import('@/views/AuthorProfile.vue')
+  },
+  {
+    path: '/training-packages',
+    name: 'TrainingPackageList',
+    component: () => import('@/views/TrainingPackageList.vue')
+  },
+  {
+    path: '/training-packages/:id',
+    name: 'TrainingPackageDetail',
+    component: () => import('@/views/TrainingPackageDetail.vue')
   }
 ]
 

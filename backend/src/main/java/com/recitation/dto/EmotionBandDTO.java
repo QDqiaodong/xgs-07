@@ -20,4 +20,6 @@ public class EmotionBandDTO {
     private String emotionType;
 
     private String remark;
+
+    private Integer emotionIntensity = 50;
 }

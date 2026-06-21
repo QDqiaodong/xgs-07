@@ -63,6 +63,10 @@ public class EmotionBandService {
         }
         emotionBand.setEmotionType(dto.getEmotionType());
         emotionBand.setRemark(dto.getRemark());
+        if (dto.getEmotionIntensity() != null) {
+            int intensity = Math.max(0, Math.min(100, dto.getEmotionIntensity()));
+            emotionBand.setEmotionIntensity(intensity);
+        }
         return emotionBandRepository.save(emotionBand);
     }
 
@@ -76,12 +80,36 @@ public class EmotionBandService {
                     Map<String, String> emotionData = new HashMap<>();
                     emotionData.put("emotionType", e.getEmotionType());
                     emotionData.put("remark", e.getRemark() != null ? e.getRemark() : "");
+                    emotionData.put("emotionIntensity", e.getEmotionIntensity() != null ? String.valueOf(e.getEmotionIntensity()) : "50");
                     map.put(e.getParagraphIndex(), emotionData);
                     seenParagraphs.add(e.getParagraphIndex());
                 }
             }
         }
         return map;
+    }
+
+    public List<Map<String, Object>> getEmotionCurve(Long userId, Long manuscriptId) {
+        List<EmotionBand> list = emotionBandRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
+        Map<Integer, EmotionBand> uniqueMap = new HashMap<>();
+        for (EmotionBand e : list) {
+            if (e.getEmotionType() != null && !e.getEmotionType().isBlank()) {
+                uniqueMap.putIfAbsent(e.getParagraphIndex(), e);
+            }
+        }
+        List<Map<String, Object>> curve = new ArrayList<>();
+        uniqueMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    EmotionBand e = entry.getValue();
+                    Map<String, Object> point = new HashMap<>();
+                    point.put("paragraphIndex", e.getParagraphIndex());
+                    point.put("emotionType", e.getEmotionType());
+                    point.put("intensity", e.getEmotionIntensity() != null ? e.getEmotionIntensity() : 50);
+                    point.put("remark", e.getRemark() != null ? e.getRemark() : "");
+                    curve.add(point);
+                });
+        return curve;
     }
 
     public List<EmotionBand> getEmotionList(Long userId, Long manuscriptId) {

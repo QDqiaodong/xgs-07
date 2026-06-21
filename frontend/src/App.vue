@@ -9,6 +9,7 @@
           </div>
           <el-menu mode="horizontal" :router="true" class="nav-menu">
             <el-menu-item index="/">首页</el-menu-item>
+            <el-menu-item index="/training-packages">训练包</el-menu-item>
             <el-menu-item index="/manuscripts">文稿广场</el-menu-item>
             <el-menu-item index="/create">录入文稿</el-menu-item>
             <el-menu-item index="/favorites">我的收藏</el-menu-item>

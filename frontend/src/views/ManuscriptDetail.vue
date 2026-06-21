@@ -15,6 +15,10 @@
             <el-icon><MagicStick /></el-icon>
             情感色带
           </el-button>
+          <el-button :type="emotionCurveVisible ? 'warning' : 'primary'" @click="emotionCurveVisible = !emotionCurveVisible">
+            <el-icon><TrendCharts /></el-icon>
+            情绪曲线
+          </el-button>
           <el-button :type="rhythmPanelVisible ? 'success' : 'primary'" @click="toggleRhythmPanel">
             <el-icon><Tickets /></el-icon>
             节奏板
@@ -169,6 +173,12 @@
                 {{ opt.label }}
               </span>
             </div>
+            <EmotionCurve
+              v-if="emotionCurveVisible"
+              :curveData="emotionCurveData"
+              :emotionOptions="emotionOptions"
+              @paragraph-click="scrollToParagraph"
+            />
             <div class="difficulty-legend" v-if="difficultyPanelVisible">
               <span class="legend-title">难点标注：</span>
               <span class="legend-item">
@@ -560,6 +570,19 @@
             </div>
           </div>
         </el-form-item>
+        <el-form-item label="情绪强度">
+          <el-slider
+            v-model="emotionForm.emotionIntensity"
+            :min="0"
+            :max="100"
+            :step="5"
+            show-stops
+            :marks="{ 0: '弱', 25: '较轻', 50: '中等', 75: '较强', 100: '强' }"
+          />
+          <div class="intensity-preview" :style="{ background: getIntensityGradientColor(emotionForm.emotionIntensity) }">
+            当前强度：{{ emotionForm.emotionIntensity }}
+          </div>
+        </el-form-item>
         <el-form-item label="情感备注">
           <el-input
             v-model="emotionForm.remark"
@@ -701,11 +724,12 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading } from '@element-plus/icons-vue'
-import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession } from '@/api'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading, TrendCharts } from '@element-plus/icons-vue'
+import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession, getEmotionCurve } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
+import EmotionCurve from '@/components/EmotionCurve.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -750,11 +774,14 @@ const paragraphProgress = ref({})
 
 const emotionPanelVisible = ref(true)
 const emotionData = ref({})
+const emotionCurveData = ref([])
+const emotionCurveVisible = ref(true)
 const showEmotionEditor = ref(false)
 const editingEmotionParagraphIndex = ref(-1)
 const emotionForm = ref({
   emotionType: '',
-  remark: ''
+  remark: '',
+  emotionIntensity: 50
 })
 
 const difficultyPanelVisible = ref(false)
@@ -977,7 +1004,8 @@ const openEmotionEditor = (paraIndex) => {
   const data = emotionData.value[paraIndex] || {}
   emotionForm.value = {
     emotionType: data.emotionType || '',
-    remark: data.remark || ''
+    remark: data.remark || '',
+    emotionIntensity: data.emotionIntensity ? parseInt(data.emotionIntensity) : 50
   }
   showEmotionEditor.value = true
 }
@@ -988,7 +1016,7 @@ const saveEmotionData = async () => {
   const paraIndex = editingEmotionParagraphIndex.value
   try {
     if (emotionForm.value.emotionType) {
-      emotionData.value[paraIndex] = { ...emotionForm.value }
+      emotionData.value[paraIndex] = { ...emotionForm.value, emotionIntensity: String(emotionForm.value.emotionIntensity || 50) }
     } else {
       delete emotionData.value[paraIndex]
     }
@@ -1003,9 +1031,11 @@ const saveEmotionData = async () => {
         manuscriptId: route.params.id,
         paragraphIndex: paraIndex,
         emotionType: emotionForm.value.emotionType,
-        remark: emotionForm.value.remark
+        remark: emotionForm.value.remark,
+        emotionIntensity: emotionForm.value.emotionIntensity || 50
       })
     }
+    await loadEmotionCurveData()
   } catch (e) {
     console.error('保存情感色带失败', e)
   } finally {
@@ -1014,7 +1044,7 @@ const saveEmotionData = async () => {
 }
 
 const clearEmotion = () => {
-  emotionForm.value = { emotionType: '', remark: '' }
+  emotionForm.value = { emotionType: '', remark: '', emotionIntensity: 50 }
 }
 
 const loadEmotionData = async () => {
@@ -1030,6 +1060,30 @@ const loadEmotionData = async () => {
     }
   } catch (e) {
     console.error('加载情感色带失败', e)
+  }
+  await loadEmotionCurveData()
+}
+
+const loadEmotionCurveData = async () => {
+  try {
+    const curve = await getEmotionCurve(userId, route.params.id)
+    emotionCurveData.value = curve || []
+  } catch (e) {
+    console.error('加载情绪曲线失败', e)
+    emotionCurveData.value = []
+  }
+}
+
+const getIntensityGradientColor = (intensity) => {
+  const i = Math.max(0, Math.min(100, intensity || 50))
+  if (i <= 25) {
+    return 'linear-gradient(90deg, #909399, #c0c4cc)'
+  } else if (i <= 50) {
+    return 'linear-gradient(90deg, #409eff, #909399)'
+  } else if (i <= 75) {
+    return 'linear-gradient(90deg, #e6a23c, #409eff)'
+  } else {
+    return 'linear-gradient(90deg, #f56c6c, #e6a23c)'
   }
 }
 
@@ -2270,6 +2324,18 @@ onUnmounted(() => {
 
 .emotion-option.active .emotion-label {
   color: var(--emotion-color, #409eff);
+}
+
+.intensity-preview {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .type-poetry .emotion-band-sidebar {

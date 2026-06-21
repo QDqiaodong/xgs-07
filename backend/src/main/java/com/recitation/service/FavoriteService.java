@@ -1,7 +1,10 @@
 package com.recitation.service;
 
+import com.recitation.common.BusinessException;
 import com.recitation.entity.Favorite;
+import com.recitation.entity.Manuscript;
 import com.recitation.repository.FavoriteRepository;
+import com.recitation.utils.ManuscriptUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,10 @@ public class FavoriteService {
     public Favorite addFavorite(Long userId, Long manuscriptId) {
         if (favoriteRepository.existsByUserIdAndManuscriptId(userId, manuscriptId)) {
             return null;
+        }
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
+        if (manuscript == null) {
+            throw new BusinessException("文稿不存在或无权限访问");
         }
         Favorite favorite = new Favorite();
         favorite.setUserId(userId);

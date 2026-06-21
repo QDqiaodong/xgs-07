@@ -17,6 +17,10 @@ public interface ManuscriptRepository extends JpaRepository<Manuscript, Long> {
 
     Page<Manuscript> findByIsPublicTrueAndStatusAndCategoryIdOrderByCreateTimeDesc(Integer status, Long categoryId, Pageable pageable);
 
+    Page<Manuscript> findByCreateUserAndStatusOrderByCreateTimeDesc(String createUser, Integer status, Pageable pageable);
+
+    Page<Manuscript> findByCreateUserAndStatusAndCategoryIdOrderByCreateTimeDesc(String createUser, Integer status, Long categoryId, Pageable pageable);
+
     List<Manuscript> findTop10ByIsPublicTrueAndStatusOrderByViewCountDesc(Integer status);
 
     List<Manuscript> findTop10ByIsPublicTrueAndStatusOrderByFavoriteCountDesc(Integer status);

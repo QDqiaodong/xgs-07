@@ -67,6 +67,26 @@
           <el-input v-model="form.introduction" type="textarea" :rows="2" placeholder="请输入文稿简介（可选）" maxlength="500" show-word-limit />
         </el-form-item>
 
+        <el-form-item label="训练标签">
+          <div class="training-tag-picker">
+            <div
+              v-for="tag in trainingTagOptions"
+              :key="tag.value"
+              :class="['tag-picker-item', { active: selectedTrainingTagSet.has(tag.value) }]"
+              :style="{ '--tag-color': tag.color, '--tag-bg': tag.bg }"
+              @click="toggleTrainingTag(tag.value)"
+            >
+              <el-icon class="picker-icon"><component :is="tag.icon" /></el-icon>
+              <span class="picker-label">{{ tag.label }}</span>
+              <el-icon v-if="selectedTrainingTagSet.has(tag.value)" class="picker-check"><Check /></el-icon>
+            </div>
+          </div>
+          <div class="tag-picker-tip">
+            <el-icon><InfoFilled /></el-icon>
+            <span>选择适用于本文稿的朗读训练重点方向，可多选</span>
+          </div>
+        </el-form-item>
+
         <el-form-item label="文稿内容" prop="content">
           <div class="editor-toolbar">
             <el-button-group>
@@ -126,6 +146,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createManuscript, updateManuscript, getManuscriptById, assessDifficulty } from '@/api'
 import { saveDraft, getDraft, removeDraft, getCurrentUserId, formatUserId, removeDifficulty } from '@/utils/storage'
 import { normalizeAuthorName } from '@/utils/author'
+import { Check, MagicStick, Document, Refresh, RefreshLeft, Wind, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -144,6 +165,13 @@ const difficultyOptions = [
 ]
 const draftKey = computed(() => isEdit.value ? `edit_${route.params.id}` : 'new')
 
+const trainingTagOptions = [
+  { value: '换气', label: '换气', icon: Wind, color: '#67c23a', bg: '#f0f9eb' },
+  { value: '重音', label: '重音', icon: Cherry, color: '#f56c6c', bg: '#fef0f0' },
+  { value: '节奏', label: '节奏', icon: Tickets, color: '#e6a23c', bg: '#fdf6ec' },
+  { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, color: '#409eff', bg: '#ecf5ff' }
+]
+
 const form = ref({
   title: '',
   content: '',
@@ -151,8 +179,29 @@ const form = ref({
   categoryId: null,
   author: '',
   difficulty: '',
-  isPublic: false
+  isPublic: false,
+  trainingTags: ''
 })
+
+const selectedTrainingTagSet = computed({
+  get() {
+    const tags = form.value.trainingTags ? form.value.trainingTags.split(',').map(t => t.trim()).filter(t => t) : []
+    return new Set(tags)
+  },
+  set(newSet) {
+    form.value.trainingTags = Array.from(newSet).join(',')
+  }
+})
+
+const toggleTrainingTag = (value) => {
+  const newSet = new Set(selectedTrainingTagSet.value)
+  if (newSet.has(value)) {
+    newSet.delete(value)
+  } else {
+    newSet.add(value)
+  }
+  selectedTrainingTagSet.value = newSet
+}
 
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
@@ -189,7 +238,8 @@ const loadManuscript = async () => {
       categoryId: data.categoryId,
       author: data.author || '',
       difficulty: data.difficulty || '',
-      isPublic: data.isPublic
+      isPublic: data.isPublic,
+      trainingTags: data.trainingTags || ''
     }
   } catch (e) {
     console.error(e)
@@ -510,6 +560,64 @@ onUnmounted(() => {
 .dim-weight {
   color: #909399;
   margin-left: auto;
+}
+
+.training-tag-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tag-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid #e4e7ed;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  color: #606266;
+}
+
+.tag-picker-item:hover {
+  border-color: var(--tag-color, #409eff);
+  color: var(--tag-color, #409eff);
+}
+
+.tag-picker-item.active {
+  border-color: var(--tag-color, #409eff);
+  background: var(--tag-bg, #ecf5ff);
+  color: var(--tag-color, #409eff);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.picker-icon {
+  font-size: 16px;
+}
+
+.picker-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.picker-check {
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.tag-picker-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>
 

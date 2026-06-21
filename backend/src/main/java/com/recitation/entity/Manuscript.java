@@ -41,6 +41,9 @@ public class Manuscript {
     @Column(length = 50)
     private String difficulty;
 
+    @Column(length = 200)
+    private String trainingTags;
+
     @Column(nullable = false)
     private Boolean isPublic = false;
 

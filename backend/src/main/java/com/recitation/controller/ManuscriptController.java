@@ -59,6 +59,15 @@ public class ManuscriptController {
         return Result.success(manuscriptService.getPublicManuscripts(categoryId, page, size));
     }
 
+    @GetMapping("/my")
+    public Result<Page<Manuscript>> getMyList(
+            @RequestParam String userId,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(manuscriptService.getUserManuscripts(userId, categoryId, page, size));
+    }
+
     @GetMapping("/hot")
     public Result<List<Manuscript>> getHotList() {
         return Result.success(manuscriptService.getHotManuscripts());

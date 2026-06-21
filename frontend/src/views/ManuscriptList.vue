@@ -1,12 +1,28 @@
 <template>
   <div class="manuscript-list-page">
     <div class="filter-bar">
-      <el-radio-group v-model="activeCategory" @change="onCategoryChange">
-        <el-radio-button :label="0">全部分类</el-radio-button>
-        <el-radio-button v-for="cat in categories" :key="cat.id" :label="cat.id">
-          {{ cat.name }}
-        </el-radio-button>
-      </el-radio-group>
+      <div class="filter-row">
+        <el-radio-group v-model="listMode" @change="onModeChange" class="mode-switcher">
+          <el-radio-button label="public">
+            <el-icon><Reading /></el-icon>
+            公共文稿
+          </el-radio-button>
+          <el-radio-button label="my">
+            <el-icon><User /></el-icon>
+            我的文稿
+          </el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-model="activeCategory" @change="onCategoryChange">
+          <el-radio-button :label="0">全部分类</el-radio-button>
+          <el-radio-button v-for="cat in categories" :key="cat.id" :label="cat.id">
+            {{ cat.name }}
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <div v-if="listMode === 'my'" class="my-list-tip">
+        <el-icon><InfoFilled /></el-icon>
+        <span>我的文稿包含所有您创建的文稿，无论是否公开。未公开发布的文稿仅您本人可见。</span>
+      </div>
     </div>
 
     <div v-if="currentCategory" class="category-detail-banner">
@@ -56,8 +72,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getManuscripts, getCategories } from '@/api'
+import { getManuscripts, getCategories, getMyManuscripts } from '@/api'
 import ManuscriptCard from '@/components/ManuscriptCard.vue'
+import { getCurrentUserId } from '@/utils/storage'
+import { Reading, User, InfoFilled } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const loading = ref(false)
@@ -67,6 +85,9 @@ const activeCategory = ref(0)
 const page = ref(1)
 const size = ref(12)
 const total = ref(0)
+const listMode = ref('public')
+
+const userId = getCurrentUserId()
 
 const currentCategory = computed(() => {
   if (activeCategory.value <= 0) return null
@@ -91,7 +112,13 @@ const loadList = async () => {
     if (activeCategory.value > 0) {
       params.categoryId = activeCategory.value
     }
-    const res = await getManuscripts(params)
+    let res
+    if (listMode.value === 'my') {
+      params.userId = userId
+      res = await getMyManuscripts(params)
+    } else {
+      res = await getManuscripts(params)
+    }
     list.value = res.content
     total.value = res.totalElements
   } catch (e) {
@@ -102,6 +129,11 @@ const loadList = async () => {
 }
 
 const onCategoryChange = () => {
+  page.value = 1
+  loadList()
+}
+
+const onModeChange = () => {
   page.value = 1
   loadList()
 }
@@ -125,6 +157,42 @@ onMounted(() => {
   padding: 16px 20px;
   border-radius: 8px;
   margin-bottom: 24px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mode-switcher {
+  margin-right: 8px;
+}
+
+.mode-switcher .el-radio-button__inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.my-list-tip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #ecf5ff 0%, #f0f9eb 100%);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.my-list-tip .el-icon {
+  color: #409eff;
+  flex-shrink: 0;
+  font-size: 15px;
 }
 
 .category-detail-banner {

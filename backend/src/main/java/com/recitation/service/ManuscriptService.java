@@ -56,6 +56,7 @@ public class ManuscriptService {
         manuscript.setCategoryId(dto.getCategoryId());
         manuscript.setAuthor(AuthorNameUtils.normalize(dto.getAuthor()));
         manuscript.setDifficulty(dto.getDifficulty());
+        manuscript.setTrainingTags(dto.getTrainingTags());
         manuscript.setIsPublic(dto.getIsPublic() != null ? dto.getIsPublic() : false);
         manuscript.setCreateUser(dto.getCreateUser());
 
@@ -90,6 +91,7 @@ public class ManuscriptService {
         manuscript.setCategoryId(dto.getCategoryId());
         manuscript.setAuthor(AuthorNameUtils.normalize(dto.getAuthor()));
         manuscript.setDifficulty(dto.getDifficulty());
+        manuscript.setTrainingTags(dto.getTrainingTags());
         if (dto.getIsPublic() != null) {
             manuscript.setIsPublic(dto.getIsPublic());
         }
@@ -152,6 +154,18 @@ public class ManuscriptService {
             return manuscriptRepository.findByIsPublicTrueAndStatusAndCategoryIdOrderByCreateTimeDesc(1, categoryId, pageable);
         }
         return manuscriptRepository.findByIsPublicTrueAndStatusOrderByCreateTimeDesc(1, pageable);
+    }
+
+    public Page<Manuscript> getUserManuscripts(String userId, Long categoryId, int page, int size) {
+        String formattedUserId = ManuscriptUtils.formatUserId(userId);
+        if (formattedUserId == null) {
+            return Page.empty();
+        }
+        Pageable pageable = PageRequest.of(page, size);
+        if (categoryId != null && categoryId > 0) {
+            return manuscriptRepository.findByCreateUserAndStatusAndCategoryIdOrderByCreateTimeDesc(formattedUserId, 1, categoryId, pageable);
+        }
+        return manuscriptRepository.findByCreateUserAndStatusOrderByCreateTimeDesc(formattedUserId, 1, pageable);
     }
 
     public List<Manuscript> getHotManuscripts() {

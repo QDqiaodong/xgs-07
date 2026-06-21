@@ -112,6 +112,19 @@
                 {{ manuscriptType === 'poetry' ? '古诗词' : '散文' }}
               </el-tag>
               <DifficultyBadge v-if="manuscript.difficulty" :difficulty="manuscript.difficulty" />
+              <template v-if="trainingTagList.length > 0">
+                <el-tag
+                  v-for="tag in trainingTagList"
+                  :key="tag.value"
+                  :type="tag.type"
+                  :effect="tag.effect"
+                  size="small"
+                  class="detail-training-tag"
+                >
+                  <el-icon class="tag-icon"><component :is="tag.icon" /></el-icon>
+                  {{ tag.label }}
+                </el-tag>
+              </template>
               <span v-if="manuscript.author" class="meta-item author-link" @click="goAuthorProfile(manuscript.author)">作者：{{ manuscript.author }}</span>
               <span class="meta-item">浏览：{{ manuscript.viewCount }}</span>
               <span class="meta-item">收藏：{{ manuscript.favoriteCount }}</span>
@@ -724,7 +737,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading, TrendCharts } from '@element-plus/icons-vue'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading, TrendCharts, Wind, Cherry, DataAnalysis } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession, getEmotionCurve } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
@@ -833,6 +846,21 @@ const emotionOptions = [
   { value: 'joyful', label: '欢快', color: '#67c23a' },
   { value: 'solemn', label: '庄严', color: '#9b59b6' }
 ]
+
+const TRAINING_TAG_CONFIG = {
+  '换气': { value: '换气', label: '换气', icon: Wind, type: 'success', effect: 'light' },
+  '重音': { value: '重音', label: '重音', icon: Cherry, type: 'danger', effect: 'light' },
+  '节奏': { value: '节奏', label: '节奏', icon: Tickets, type: 'warning', effect: 'light' },
+  '情绪递进': { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, type: 'primary', effect: 'light' }
+}
+
+const trainingTagList = computed(() => {
+  if (!manuscript.value?.trainingTags) return []
+  const tags = manuscript.value.trainingTags.split(',').map(t => t.trim()).filter(t => t)
+  return tags
+    .map(tag => TRAINING_TAG_CONFIG[tag])
+    .filter(Boolean)
+})
 
 const statusOptions = [
   { value: 'mastered', label: '已熟练', type: 'success' },
@@ -1636,6 +1664,16 @@ onUnmounted(() => {
   color: #409eff;
   cursor: pointer;
   transition: color 0.2s;
+}
+
+.detail-training-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.detail-training-tag .tag-icon {
+  font-size: 12px;
 }
 
 .author-link:hover {

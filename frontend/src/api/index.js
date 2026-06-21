@@ -8,6 +8,8 @@ export const getDifficultyLevels = () => request.get('/difficulty/levels')
 
 export const getManuscripts = (params) => request.get('/manuscripts', { params })
 
+export const getMyManuscripts = (params) => request.get('/manuscripts/my', { params })
+
 export const getManuscriptDetail = (id, userId) => request.get(`/manuscripts/${id}/detail`, { params: { userId } })
 
 export const getManuscriptById = (id, userId) => request.get(`/manuscripts/${id}`, { params: { userId } })

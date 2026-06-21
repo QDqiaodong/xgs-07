@@ -77,6 +77,7 @@ public class ParagraphProgressService {
     }
 
     public Map<Integer, String> getProgressMap(Long userId, Long manuscriptId) {
+        validateManuscriptAccess(manuscriptId, userId);
         List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
         Map<Integer, String> map = new HashMap<>();
         for (ParagraphProgress p : list) {
@@ -88,6 +89,7 @@ public class ParagraphProgressService {
     }
 
     public List<ParagraphProgress> getProgressList(Long userId, Long manuscriptId) {
+        validateManuscriptAccess(manuscriptId, userId);
         List<ParagraphProgress> list = paragraphProgressRepository.findByUserIdAndManuscriptId(userId, manuscriptId);
         Map<Integer, ParagraphProgress> uniqueMap = new LinkedHashMap<>();
         for (ParagraphProgress p : list) {
@@ -101,7 +103,7 @@ public class ParagraphProgressService {
     public ParagraphTrainingStateDTO getTrainingState(Long userId, Long manuscriptId) {
         validateManuscriptAccess(manuscriptId, userId);
 
-        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
 
         ParagraphTrainingStateDTO dto = new ParagraphTrainingStateDTO();
         dto.setManuscriptId(manuscriptId);
@@ -200,10 +202,11 @@ public class ParagraphProgressService {
     }
 
     public TrainingProgressDTO getTrainingProgress(Long userId, Long manuscriptId) {
+        validateManuscriptAccess(manuscriptId, userId);
         TrainingProgressDTO dto = new TrainingProgressDTO();
         dto.setManuscriptId(manuscriptId);
 
-        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
         if (manuscript != null) {
             String categoryName = manuscript.getCategoryName() != null ? manuscript.getCategoryName() : "";
             String content = manuscript.getContent() != null ? manuscript.getContent() : "";
@@ -282,7 +285,7 @@ public class ParagraphProgressService {
             TrainingProgressDTO dto = new TrainingProgressDTO();
             dto.setManuscriptId(manuscriptId);
 
-            Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+            Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
             if (manuscript != null && manuscript.getStatus() == 1) {
                 String categoryName = manuscript.getCategoryName() != null ? manuscript.getCategoryName() : "";
                 String content = manuscript.getContent() != null ? manuscript.getContent() : "";
@@ -409,7 +412,7 @@ public class ParagraphProgressService {
                         .mapToInt(p -> p.getPracticeCount() != null ? p.getPracticeCount() : 0)
                         .sum();
 
-                Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+                Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
                 if (manuscript == null || manuscript.getStatus() != 1) continue;
 
                 PracticeCalendarDTO.ManuscriptPracticeInfo info = new PracticeCalendarDTO.ManuscriptPracticeInfo();
@@ -436,7 +439,7 @@ public class ParagraphProgressService {
                 Long manuscriptId = noteEntry.getKey();
                 PracticeNote note = noteEntry.getValue();
 
-                Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+                Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, ManuscriptUtils.formatUserId(userId));
                 if (manuscript == null || manuscript.getStatus() != 1) continue;
 
                 Map<Long, PracticeCalendarDTO.ManuscriptPracticeInfo> dayMap = dailyManuscriptMap.computeIfAbsent(date, k -> new LinkedHashMap<>());

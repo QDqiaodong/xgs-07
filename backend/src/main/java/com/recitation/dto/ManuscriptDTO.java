@@ -30,6 +30,8 @@ public class ManuscriptDTO {
 
     private String difficulty;
 
+    private String trainingTags;
+
     private Boolean isPublic;
 
     private String createUser;

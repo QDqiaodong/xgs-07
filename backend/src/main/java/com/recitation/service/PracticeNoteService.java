@@ -5,6 +5,7 @@ import com.recitation.dto.PracticeNoteDTO;
 import com.recitation.entity.Manuscript;
 import com.recitation.entity.PracticeNote;
 import com.recitation.repository.PracticeNoteRepository;
+import com.recitation.utils.ManuscriptUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -28,17 +29,13 @@ public class PracticeNoteService {
     private ManuscriptService manuscriptService;
 
     private void validateManuscriptAccess(Long manuscriptId, Long userId) {
-        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, userIdStr);
         if (manuscript == null) {
-            throw new BusinessException("文稿不存在，无法保存笔记");
+            throw new BusinessException("文稿不存在或无权限访问，无法保存笔记");
         }
         if (manuscript.getStatus() != 1) {
             throw new BusinessException("文稿状态异常，无法保存笔记");
-        }
-        String userIdStr = String.valueOf(userId);
-        boolean isOwner = manuscript.getCreateUser() != null && manuscript.getCreateUser().equals(userIdStr);
-        if (!manuscript.getIsPublic() && !isOwner) {
-            throw new BusinessException("无权限访问该文稿，无法保存笔记");
         }
     }
 
@@ -60,7 +57,8 @@ public class PracticeNoteService {
     }
 
     public PracticeNote getNote(Long userId, Long manuscriptId) {
-        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId, userIdStr);
         if (manuscript == null || manuscript.getStatus() != 1) {
             return null;
         }
@@ -70,11 +68,12 @@ public class PracticeNoteService {
     public Page<PracticeNote> getUserNotes(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         List<PracticeNote> allNotes = practiceNoteRepository.findByUserIdOrderByUpdateTimeDesc(userId);
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
         
         Map<Long, PracticeNote> uniqueMap = new LinkedHashMap<>();
         for (PracticeNote note : allNotes) {
             if (!uniqueMap.containsKey(note.getManuscriptId())) {
-                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId());
+                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId(), userIdStr);
                 if (manuscript != null && manuscript.getStatus() == 1) {
                     uniqueMap.put(note.getManuscriptId(), note);
                 }
@@ -94,7 +93,7 @@ public class PracticeNoteService {
         if (manuscript == null || manuscript.getStatus() != 1) {
             throw new BusinessException("文稿不存在或已下架");
         }
-        if (!manuscript.getIsPublic()) {
+        if (!Boolean.TRUE.equals(manuscript.getIsPublic())) {
             throw new BusinessException("该文稿为私有，无法查看笔记");
         }
         return practiceNoteRepository.findByManuscriptIdOrderByCreateTimeDesc(manuscriptId);
@@ -116,9 +115,10 @@ public class PracticeNoteService {
     public List<PracticeNote> getUserEmotionScoreTrend(Long userId) {
         List<PracticeNote> allNotes = practiceNoteRepository.findByUserIdOrderByUpdateTimeDesc(userId);
         List<PracticeNote> result = new ArrayList<>();
+        String userIdStr = ManuscriptUtils.formatUserId(userId);
         for (PracticeNote note : allNotes) {
             if (note.getEmotionControlScore() != null) {
-                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId());
+                Manuscript manuscript = manuscriptService.getManuscriptById(note.getManuscriptId(), userIdStr);
                 if (manuscript != null && manuscript.getStatus() == 1) {
                     result.add(note);
                 }

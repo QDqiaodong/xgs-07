@@ -81,9 +81,11 @@ public class TrainingPackageService {
             itemDTO.setStage(item.getStage());
             itemDTO.setStageNote(item.getStageNote());
             manuscriptRepository.findById(item.getManuscriptId()).ifPresent(m -> {
-                itemDTO.setManuscriptTitle(m.getTitle());
-                itemDTO.setManuscriptAuthor(m.getAuthor());
-                itemDTO.setManuscriptDifficulty(m.getDifficulty());
+                if (ManuscriptUtils.canAccessManuscript(m, userIdStr)) {
+                    itemDTO.setManuscriptTitle(m.getTitle());
+                    itemDTO.setManuscriptAuthor(m.getAuthor());
+                    itemDTO.setManuscriptDifficulty(m.getDifficulty());
+                }
             });
             itemDTOs.add(itemDTO);
         }
@@ -226,6 +228,7 @@ public class TrainingPackageService {
         dto.setTotalManuscripts(totalManuscripts);
 
         int completedCount = 0;
+        String progressUserIdStr = ManuscriptUtils.formatUserId(progress.getUserId());
         for (TrainingPackageItem item : items) {
             List<ParagraphProgress> paragraphProgresses = paragraphProgressRepository
                     .findByUserIdAndManuscriptId(progress.getUserId(), item.getManuscriptId());
@@ -234,6 +237,7 @@ public class TrainingPackageService {
                     .count();
             Optional<Manuscript> manuscriptOpt = manuscriptRepository.findById(item.getManuscriptId());
             int paragraphCount = manuscriptOpt
+                    .filter(m -> ManuscriptUtils.canAccessManuscript(m, progressUserIdStr))
                     .map(m -> ManuscriptUtils.countParagraphs(m.getContent()))
                     .orElse(0);
             if (paragraphCount > 0 && masteredCount >= paragraphCount) {

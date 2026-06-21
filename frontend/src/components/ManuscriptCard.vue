@@ -9,6 +9,20 @@
       <p v-if="manuscript.introduction" class="intro text-ellipsis-2">{{ manuscript.introduction }}</p>
       <p v-else class="intro text-ellipsis-3">{{ manuscript.content }}</p>
       
+      <div v-if="trainingTagList.length > 0" class="training-tags-row">
+        <el-tag
+          v-for="tag in trainingTagList"
+          :key="tag.value"
+          :type="tag.type"
+          :effect="tag.effect"
+          size="small"
+          class="training-tag"
+        >
+          <el-icon class="tag-icon"><component :is="tag.icon" /></el-icon>
+          {{ tag.label }}
+        </el-tag>
+      </div>
+      
       <div class="training-progress" v-if="progress">
         <div class="progress-mini-bar">
           <div class="progress-mini-fill" :style="{ width: progress.progressPercent + '%' }"></div>
@@ -48,7 +62,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Operation } from '@element-plus/icons-vue'
+import { Operation, Wind, Cherry, Tickets, DataAnalysis } from '@element-plus/icons-vue'
 import DifficultyBadge from '@/components/DifficultyBadge.vue'
 import { normalizeAuthorName } from '@/utils/author'
 
@@ -64,6 +78,21 @@ const props = defineProps({
 })
 
 const router = useRouter()
+
+const TRAINING_TAG_CONFIG = {
+  '换气': { value: '换气', label: '换气', icon: Wind, type: 'success', effect: 'light' },
+  '重音': { value: '重音', label: '重音', icon: Cherry, type: 'danger', effect: 'light' },
+  '节奏': { value: '节奏', label: '节奏', icon: Tickets, type: 'warning', effect: 'light' },
+  '情绪递进': { value: '情绪递进', label: '情绪递进', icon: DataAnalysis, type: 'primary', effect: 'light' }
+}
+
+const trainingTagList = computed(() => {
+  if (!props.manuscript.trainingTags) return []
+  const tags = props.manuscript.trainingTags.split(',').map(t => t.trim()).filter(t => t)
+  return tags
+    .map(tag => TRAINING_TAG_CONFIG[tag])
+    .filter(Boolean)
+})
 
 const tagType = computed(() => {
   const types = ['', 'primary', 'success', 'warning', 'danger', 'info']
@@ -127,6 +156,23 @@ const goAuthorProfile = (author) => {
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid #ebeef5;
+}
+
+.training-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.training-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tag-icon {
+  font-size: 12px;
 }
 
 .author {

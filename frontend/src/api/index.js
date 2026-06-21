@@ -52,6 +52,8 @@ export const getParagraphProgress = (userId, manuscriptId) => request.get('/para
 
 export const getParagraphProgressList = (userId, manuscriptId) => request.get('/paragraph-progress/list', { params: { userId, manuscriptId } })
 
+export const getParagraphTrainingState = (userId, manuscriptId) => request.get('/paragraph-progress/training-state', { params: { userId, manuscriptId } })
+
 export const getTrainingProgress = (userId, manuscriptId) => request.get('/paragraph-progress/stats', { params: { userId, manuscriptId } })
 
 export const getUserTrainingProgressList = (userId) => request.get('/paragraph-progress/user-stats', { params: { userId } })

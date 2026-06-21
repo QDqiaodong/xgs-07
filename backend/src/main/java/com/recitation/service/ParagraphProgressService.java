@@ -2,9 +2,11 @@ package com.recitation.service;
 
 import com.recitation.common.BusinessException;
 import com.recitation.dto.ParagraphProgressDTO;
+import com.recitation.dto.ParagraphTrainingStateDTO;
 import com.recitation.dto.PracticeCalendarDTO;
 import com.recitation.dto.TrainingProgressDTO;
 import com.recitation.entity.Manuscript;
+import com.recitation.entity.ManuscriptParagraph;
 import com.recitation.entity.ParagraphProgress;
 import com.recitation.entity.PracticeNote;
 import com.recitation.enums.ParagraphStatus;
@@ -23,6 +25,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +39,9 @@ public class ParagraphProgressService {
 
     @Resource
     private ManuscriptService manuscriptService;
+
+    @Resource
+    private ManuscriptParagraphService manuscriptParagraphService;
 
     private void validateManuscriptAccess(Long manuscriptId, Long userId) {
         Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
@@ -90,6 +96,101 @@ public class ParagraphProgressService {
             }
         }
         return new ArrayList<>(uniqueMap.values());
+    }
+
+    public ParagraphTrainingStateDTO getTrainingState(Long userId, Long manuscriptId) {
+        validateManuscriptAccess(manuscriptId, userId);
+
+        Manuscript manuscript = manuscriptService.getManuscriptById(manuscriptId);
+
+        ParagraphTrainingStateDTO dto = new ParagraphTrainingStateDTO();
+        dto.setManuscriptId(manuscriptId);
+        if (manuscript != null) {
+            dto.setManuscriptTitle(manuscript.getTitle());
+        }
+
+        TreeMap<Integer, ManuscriptParagraph> paragraphMap = new TreeMap<>();
+        List<ManuscriptParagraph> stored = manuscriptParagraphService.getParagraphList(manuscriptId);
+        if (stored != null) {
+            for (ManuscriptParagraph mp : stored) {
+                if (mp.getParagraphIndex() != null) {
+                    paragraphMap.put(mp.getParagraphIndex(), mp);
+                }
+            }
+        }
+
+        List<String> contents = new ArrayList<>();
+        if (!paragraphMap.isEmpty()) {
+            for (ManuscriptParagraph mp : paragraphMap.values()) {
+                contents.add(mp.getContent() != null ? mp.getContent() : "");
+            }
+        } else if (manuscript != null) {
+            String categoryName = manuscript.getCategoryName() != null ? manuscript.getCategoryName() : "";
+            String content = manuscript.getContent() != null ? manuscript.getContent() : "";
+            contents = ManuscriptUtils.splitParagraphContents(content, categoryName);
+        }
+
+        int total = contents.size();
+        dto.setTotalParagraphs(total);
+
+        Map<Integer, String> statusMap = getProgressMap(userId, manuscriptId);
+
+        List<ParagraphTrainingStateDTO.ParagraphInfo> paragraphs = new ArrayList<>();
+        List<Integer> completed = new ArrayList<>();
+        List<Integer> strengthen = new ArrayList<>();
+        List<Integer> skip = new ArrayList<>();
+
+        for (int i = 0; i < total; i++) {
+            String status = statusMap.get(i);
+            ParagraphTrainingStateDTO.ParagraphInfo info = new ParagraphTrainingStateDTO.ParagraphInfo();
+            info.setParagraphIndex(i);
+            info.setContent(contents.get(i));
+
+            ManuscriptParagraph mp = paragraphMap.get(i);
+            if (mp != null) {
+                info.setReadingTip(mp.getReadingTip() != null ? mp.getReadingTip() : "");
+                info.setPracticeFocus(mp.getPracticeFocus() != null ? mp.getPracticeFocus() : "");
+            } else {
+                info.setReadingTip("");
+                info.setPracticeFocus("");
+            }
+            info.setStatus(status != null ? status : "");
+            paragraphs.add(info);
+
+            if (ParagraphStatus.MASTERED.getValue().equals(status)) {
+                completed.add(i);
+            } else if (ParagraphStatus.STRENGTHEN.getValue().equals(status)) {
+                strengthen.add(i);
+            } else if (ParagraphStatus.SKIP.getValue().equals(status)) {
+                skip.add(i);
+            }
+        }
+
+        dto.setParagraphs(paragraphs);
+        dto.setCompletedParagraphs(completed);
+        dto.setStrengthenParagraphs(strengthen);
+        dto.setSkipParagraphs(skip);
+
+        int current = -1;
+        for (int i = 0; i < total; i++) {
+            String status = statusMap.get(i);
+            if (!ParagraphStatus.MASTERED.getValue().equals(status)
+                    && !ParagraphStatus.SKIP.getValue().equals(status)) {
+                current = i;
+                break;
+            }
+        }
+        if (current == -1) {
+            current = total > 0 ? total - 1 : 0;
+            dto.setTrainingCompleted(true);
+        }
+        dto.setCurrentParagraphIndex(current);
+
+        if (total > 0) {
+            dto.setProgressPercent(Math.round((completed.size() * 100.0f) / total));
+        }
+
+        return dto;
     }
 
     @Transactional

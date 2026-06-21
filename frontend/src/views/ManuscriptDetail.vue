@@ -31,6 +31,10 @@
             <el-icon><EditPen /></el-icon>
             记录笔记
           </el-button>
+          <el-button type="success" plain @click="goToTraining">
+            <el-icon><Reading /></el-icon>
+            逐段跟读训练
+          </el-button>
           <el-button v-if="!practiceSessionActive" type="success" @click="startPractice" :loading="savingPractice">
             <el-icon><VideoPlay /></el-icon>
             开始练习
@@ -697,7 +701,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera } from '@element-plus/icons-vue'
+import { Tickets, ArrowLeft, ArrowRight, Edit, Check, Warning, Clock, MagicStick, EditPen, Microphone, CircleCheck, Star, Timer, VideoPlay, Close, VideoCamera, Reading } from '@element-plus/icons-vue'
 import { getManuscriptDetail, addFavorite, removeFavorite, checkFavorite, getManuscriptNotes, saveNote as saveNoteApi, getNote, saveParagraphProgress, getParagraphProgress, deleteParagraphProgress, saveEmotionBand, getEmotionBands, deleteEmotionBand, savePronunciationDifficulty, getPronunciationDifficultyMap, getPronunciationDifficultyByParagraph, deletePronunciationDifficulty, startPracticeSession, endPracticeSession, savePracticeSession as savePracticeSessionApi, getPracticeSessionStats, getLatestPracticeSession } from '@/api'
 import { getCurrentUserId, getRhythm, saveRhythm, getProgress, saveProgress, getEmotion, saveEmotion, getDifficulty, saveDifficulty, canAccessManuscript, getContentHash, removeDifficulty } from '@/utils/storage'
 import { splitContentSections, getParagraphSections, getParagraphIndex as calcParagraphIndex, detectManuscriptType, analyzeDifficultContent, renderAnnotatedHtml } from '@/utils/manuscript'
@@ -705,6 +709,7 @@ import DifficultyBadge from '@/components/DifficultyBadge.vue'
 
 const route = useRoute()
 const router = useRouter()
+const goToTraining = () => router.push('/manuscript/' + route.params.id + '/training')
 const manuscript = ref(null)
 const loading = ref(false)
 const notAllowed = ref(false)

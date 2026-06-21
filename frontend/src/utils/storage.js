@@ -3,6 +3,7 @@ const RHYTHM_KEY = 'recitation_rhythm_'
 const PROGRESS_KEY = 'recitation_progress_'
 const EMOTION_KEY = 'recitation_emotion_'
 const DIFFICULTY_KEY = 'recitation_difficulty_'
+const TRAINING_CURRENT_KEY = 'recitation_training_current_'
 
 const hashContent = (content) => {
   if (!content) return ''
@@ -111,6 +112,38 @@ export const removeProgress = (userId, manuscriptId) => {
     localStorage.removeItem(PROGRESS_KEY + userId + '_' + manuscriptId)
   } catch (e) {
     console.error('删除段落进度失败', e)
+  }
+}
+
+export const saveTrainingCurrent = (userId, manuscriptId, currentIndex) => {
+  try {
+    localStorage.setItem(TRAINING_CURRENT_KEY + userId + '_' + manuscriptId, JSON.stringify({
+      data: currentIndex,
+      timestamp: Date.now()
+    }))
+  } catch (e) {
+    console.error('保存跟读训练进度失败', e)
+  }
+}
+
+export const getTrainingCurrent = (userId, manuscriptId) => {
+  try {
+    const item = localStorage.getItem(TRAINING_CURRENT_KEY + userId + '_' + manuscriptId)
+    if (item) {
+      const parsed = JSON.parse(item)
+      return parsed.data
+    }
+  } catch (e) {
+    console.error('读取跟读训练进度失败', e)
+  }
+  return null
+}
+
+export const removeTrainingCurrent = (userId, manuscriptId) => {
+  try {
+    localStorage.removeItem(TRAINING_CURRENT_KEY + userId + '_' + manuscriptId)
+  } catch (e) {
+    console.error('删除跟读训练进度失败', e)
   }
 }
 

@@ -17,6 +17,11 @@ const routes = [
     component: () => import('@/views/ManuscriptDetail.vue')
   },
   {
+    path: '/manuscript/:id/training',
+    name: 'ParagraphTraining',
+    component: () => import('@/views/ParagraphTraining.vue')
+  },
+  {
     path: '/create',
     name: 'CreateManuscript',
     component: () => import('@/views/CreateManuscript.vue')
